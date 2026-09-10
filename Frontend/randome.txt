@@ -1,0 +1,2000 @@
+
+
+// ============================================================
+// LOGIN PAGE
+// Description: User login page with role-based redirect
+// Features: Login, Role-based redirect, Auto-login after registration
+// ============================================================
+
+// import React, { useEffect } from 'react';
+// import { useNavigate } from 'react-router-dom';
+// import { useDispatch, useSelector } from 'react-redux';
+// import { loginUser } from '../../../store/slices/authSlice';
+// import AuthForm from '../components/AuthForm';
+// import { toast } from 'react-toastify';
+
+// const Login = () => {
+//     const dispatch = useDispatch();
+//     const navigate = useNavigate();
+//     const { loading, error, user, isAuthenticated } = useSelector((state) => state.auth);
+
+//     // Redirect based on user role after successful login
+//     useEffect(() => {
+//         if (isAuthenticated && user) {
+//             const role = user?.role?.roleName || user?.role_name || 'customer';
+            
+//             if (role === 'super_admin' || role === 'sub_admin') {
+//                 navigate('/admin/dashboard', { replace: true });
+//             } else if (role === 'seller' || role === 'seller_employee') {
+//                 navigate('/seller/dashboard', { replace: true });
+//             } else {
+//                 navigate('/', { replace: true });
+//             }
+//         }
+//     }, [isAuthenticated, user, navigate]);
+
+//     const handleLogin = async (data) => {
+//         const result = await dispatch(loginUser(data));
+//         if (result.meta.requestStatus === 'fulfilled') {
+//             toast.success('Login successful!');
+//             navigate('/', { replace: true }); // Redirect to home page after successful login
+//         }
+//     };
+
+//     return (
+//         <AuthForm
+//             type="login"
+//             onSubmit={handleLogin}
+//             loading={loading}
+//             error={error}
+//         />
+//     );
+// };
+
+// export default Login;
+
+
+
+
+
+
+
+
+
+// ============================================================
+// LOGIN PAGE — Production version with Redux + Router
+// ============================================================
+<!-- import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginUser } from '../../../store/slices/authSlice';
+import { toast } from 'react-toastify';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, ShoppingBag, AlertCircle } from 'lucide-react';
+
+const Login = () => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { loading, error, user, isAuthenticated } = useSelector((state) => state.auth);
+
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            const role = user?.role?.roleName || user?.role_name || 'customer';
+            if (role === 'super_admin' || role === 'sub_admin') {
+                navigate('/admin/dashboard', { replace: true });
+            } else if (role === 'seller' || role === 'seller_employee') {
+                navigate('/seller/dashboard', { replace: true });
+            } else {
+                navigate('/', { replace: true });
+            }
+        }
+    }, [isAuthenticated, user, navigate]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const result = await dispatch(loginUser({ email, password }));
+        if (result.meta.requestStatus === 'fulfilled') {
+            toast.success('Login successful!');
+        }
+    };
+
+    return (
+        <div className="min-h-screen w-full flex bg-orange-50">
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+                .font-display { font-family: 'Space Grotesk', sans-serif; }
+                .font-body { font-family: 'Inter', sans-serif; }
+                .font-tag { font-family: 'JetBrains Mono', monospace; }
+            `}</style>
+
+            {/* LEFT PANEL */}
+            <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12 bg-indigo-950">
+                <div className="absolute top-20 right-16 w-28 rounded-md border border-dashed border-amber-400/30 bg-white/5 px-3 py-2 rotate-6">
+                    <p className="font-tag text-[10px] text-amber-300/60">ELECTRONICS</p>
+                </div>
+                <div className="absolute top-64 right-40 w-24 rounded-md border border-dashed border-amber-400/30 bg-white/5 px-3 py-2 -rotate-6">
+                    <p className="font-tag text-[10px] text-amber-300/60">FASHION</p>
+                </div>
+                <div className="absolute bottom-40 right-10 w-28 rounded-md border border-dashed border-amber-400/30 bg-white/5 px-3 py-2 rotate-3">
+                    <p className="font-tag text-[10px] text-amber-300/60">HOME &amp; LIVING</p>
+                </div>
+                <div className="absolute bottom-72 left-24 w-24 rounded-md border border-dashed border-amber-400/30 bg-white/5 px-3 py-2 -rotate-12">
+                    <p className="font-tag text-[10px] text-amber-300/60">GROCERY</p>
+                </div>
+
+                <div className="relative z-10 flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-full bg-amber-400 flex items-center justify-center">
+                        <ShoppingBag className="w-5 h-5 text-indigo-950" strokeWidth={2.5} />
+                    </div>
+                    <span className="font-display text-lg font-bold text-white tracking-tight">Bazaario</span>
+                </div>
+
+                <div className="relative z-10 max-w-md">
+                    <h1 className="font-display text-4xl font-bold text-white leading-tight">
+                        The stalls stay open,<br />day and night.
+                    </h1>
+                    <p className="font-body text-indigo-200/70 mt-4 text-[15px] leading-relaxed">
+                        Every seller you trust, every order you've placed, one gate to walk back through.
+                    </p>
+                </div>
+
+                <div className="relative z-10 flex items-center gap-3 font-tag text-[11px] text-indigo-300/50">
+                    <span className="w-8 h-px bg-indigo-300/30" />
+                    GATE · 24H ACCESS
+                </div>
+            </div>
+
+            {/* RIGHT PANEL — FORM */}
+            <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
+                <div className="w-full max-w-md">
+                    <div className="relative bg-white rounded-2xl shadow-xl">
+                        <div className="px-8 pt-9 pb-6">
+                            <div className="lg:hidden flex items-center gap-2 mb-6">
+                                <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center">
+                                    <ShoppingBag className="w-4 h-4 text-indigo-950" strokeWidth={2.5} />
+                                </div>
+                                <span className="font-display text-base font-bold text-stone-900">Bazaario</span>
+                            </div>
+                            <h2 className="font-display text-2xl font-bold text-stone-900">Welcome back</h2>
+                            <p className="font-body text-sm text-stone-500 mt-1.5">
+                                Sign in to pick up your cart where you left it.
+                            </p>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute -left-3 top-0 w-6 h-6 rounded-full bg-orange-50 -translate-y-1/2" />
+                            <div className="absolute -right-3 top-0 w-6 h-6 rounded-full bg-orange-50 -translate-y-1/2" />
+                            <div className="border-t-2 border-dashed border-stone-200 mx-1" />
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="px-8 pt-6 pb-8">
+                            {error && (
+                                <div className="mb-5 flex items-start gap-2.5 rounded-lg bg-rose-50 border border-rose-100 px-3.5 py-3">
+                                    <AlertCircle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
+                                    <p className="font-body text-[13px] text-rose-700 leading-snug">{error}</p>
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="font-body block text-xs font-medium text-stone-600 mb-1.5">
+                                        Email address
+                                    </label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="name@company.com"
+                                            required
+                                            className="font-body w-full pl-10 pr-3.5 py-2.5 text-[14px] text-stone-900 placeholder-stone-400 bg-stone-50 border border-stone-200 rounded-lg outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="font-body block text-xs font-medium text-stone-600">
+                                            Password
+                                        </label>
+                                        <a href="/forgot-password" className="font-body text-xs font-medium text-amber-600 hover:text-amber-700">
+                                            Forgot password?
+                                        </a>
+                                    </div>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Enter your password"
+                                            required
+                                            className="font-body w-full pl-10 pr-10 py-2.5 text-[14px] text-stone-900 placeholder-stone-400 bg-stone-50 border border-stone-200 rounded-lg outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword((s) => !s)}
+                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                        >
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="font-body w-full mt-6 flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-500 disabled:opacity-70 text-indigo-950 font-semibold text-[14px] py-3 rounded-lg transition"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Signing in…
+                                    </>
+                                ) : (
+                                    <>
+                                        Sign in
+                                        <ArrowRight className="w-4 h-4" />
+                                    </>
+                                )}
+                            </button>
+
+                            <p className="font-body text-center text-[13px] text-stone-500 mt-6">
+                                New to Bazaario?{' '}
+                                <a href="/register" className="font-medium text-amber-600 hover:text-amber-700">
+                                    Create an account
+                                </a>
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Login; -->
+
+
+
+
+
+// import React, { useState } from 'react';
+// import { Link } from 'react-router-dom';
+// import Input from '../../../components/forms/Input';
+// import {
+//     FiMail, FiLock, FiUser, FiPhone, FiCheckCircle,
+//     FiEye, FiEyeOff, FiCheck, FiAlertCircle
+// } from 'react-icons/fi';
+
+// const AuthForm = ({
+//     type = 'login',
+//     onSubmit,
+//     onVerifyOtp,
+//     onResendOtp,
+//     loading = false,
+//     otpLoading = false,
+//     error = null,
+//     otpError = null,
+//     otpSent = false,
+//     otpVerified = false,
+//     email = '',
+//     timer = 60,
+//     canResend = false,
+// }) => {
+//     const [formData, setFormData] = useState({
+//         firstName: '',
+//         lastName: '',
+//         email: '',
+//         password: '',
+//         confirmPassword: '',
+//         mobileNumber: '',
+//         termsAccepted: false,
+//     });
+
+//     const [otp, setOtp] = useState(['', '', '', '', '', '']);
+//     const [formErrors, setFormErrors] = useState({});
+//     const [touchedFields, setTouchedFields] = useState({});
+//     const [otpErrorLocal, setOtpErrorLocal] = useState('');
+//     const [showPassword, setShowPassword] = useState(false);
+//     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+//     // ============================================================
+//     // HANDLE FIELD CHANGE
+//     // ============================================================
+//     const handleChange = (e) => {
+//         const { name, value, type: inputType, checked } = e.target;
+//         setFormData((prev) => ({
+//             ...prev,
+//             [name]: inputType === 'checkbox' ? checked : value,
+//         }));
+
+//         if (formErrors[name]) {
+//             setFormErrors((prev) => ({ ...prev, [name]: '' }));
+//         }
+//     };
+
+//     const handleBlur = (e) => {
+//         const { name } = e.target;
+//         setTouchedFields((prev) => ({ ...prev, [name]: true }));
+//         validateField(name);
+//     };
+
+//     // ============================================================
+//     // SINGLE FIELD VALIDATION
+//     // ============================================================
+//     const validateField = (fieldName) => {
+//         let error = '';
+
+//         switch (fieldName) {
+//             case 'firstName':
+//                 if (type === 'register' && !formData.firstName?.trim()) {
+//                     error = 'First name is required';
+//                 } else if (type === 'register' && formData.firstName?.trim().length < 2) {
+//                     error = 'First name must be at least 2 characters';
+//                 }
+//                 break;
+
+//             case 'lastName':
+//                 if (type === 'register' && !formData.lastName?.trim()) {
+//                     error = 'Last name is required';
+//                 } else if (type === 'register' && formData.lastName?.trim().length < 2) {
+//                     error = 'Last name must be at least 2 characters';
+//                 }
+//                 break;
+
+//             case 'mobileNumber':
+//                 if (type === 'register' && !formData.mobileNumber?.trim()) {
+//                     error = 'Mobile number is required';
+//                 } else if (type === 'register' && !/^[0-9]{10}$/.test(formData.mobileNumber)) {
+//                     error = 'Enter a valid 10-digit mobile number';
+//                 }
+//                 break;
+
+//             case 'email':
+//                 if (!formData.email?.trim()) {
+//                     error = 'Email is required';
+//                 } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+//                     error = 'Enter a valid email address';
+//                 }
+//                 break;
+
+//             case 'password':
+//                 if (!formData.password?.trim()) {
+//                     error = 'Password is required';
+//                 } else if (formData.password.length < 8) {
+//                     error = 'Password must be at least 8 characters';
+//                 } else if (type === 'register' && !/(?=.*[A-Z])(?=.*[a-z])(?=.*\d)/.test(formData.password)) {
+//                     error = 'Password must contain uppercase, lowercase & number';
+//                 }
+//                 break;
+
+//             case 'confirmPassword':
+//                 if (type === 'register' && formData.password !== formData.confirmPassword) {
+//                     error = 'Passwords do not match';
+//                 }
+//                 break;
+
+//             case 'termsAccepted':
+//                 if (type === 'register' && !formData.termsAccepted) {
+//                     error = 'You must accept the terms';
+//                 }
+//                 break;
+
+//             default:
+//                 break;
+//         }
+
+//         setFormErrors((prev) => ({ ...prev, [fieldName]: error }));
+//         return error;
+//     };
+
+//     // ============================================================
+//     // FULL FORM VALIDATION
+//     // ============================================================
+//     const validate = () => {
+//         const errors = {};
+
+//         if (type === 'register') {
+//             if (!formData.firstName?.trim()) {
+//                 errors.firstName = 'First name is required';
+//             }
+//             if (!formData.lastName?.trim()) {
+//                 errors.lastName = 'Last name is required';
+//             }
+//             if (!formData.mobileNumber?.trim()) {
+//                 errors.mobileNumber = 'Mobile number is required';
+//             } else if (!/^[0-9]{10}$/.test(formData.mobileNumber)) {
+//                 errors.mobileNumber = 'Enter a valid 10-digit mobile number';
+//             }
+//             if (!formData.email?.trim()) {
+//                 errors.email = 'Email is required';
+//             } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+//                 errors.email = 'Enter a valid email address';
+//             }
+//             if (!formData.password?.trim()) {
+//                 errors.password = 'Password is required';
+//             } else if (formData.password.length < 8) {
+//                 errors.password = 'Password must be at least 8 characters';
+//             } else if (!/(?=.*[A-Z])(?=.*[a-z])(?=.*\d)/.test(formData.password)) {
+//                 errors.password = 'Password must contain uppercase, lowercase & number';
+//             }
+//             if (formData.password !== formData.confirmPassword) {
+//                 errors.confirmPassword = 'Passwords do not match';
+//             }
+//             if (!formData.termsAccepted) {
+//                 errors.termsAccepted = 'You must accept the terms';
+//             }
+//         } else if (type === 'login') {
+//             if (!formData.email?.trim()) {
+//                 errors.email = 'Email is required';
+//             } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+//                 errors.email = 'Enter a valid email address';
+//             }
+//             if (!formData.password?.trim()) {
+//                 errors.password = 'Password is required';
+//             }
+//         } else if (type === 'forgot') {
+//             if (!formData.email?.trim()) {
+//                 errors.email = 'Email is required';
+//             } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+//                 errors.email = 'Enter a valid email address';
+//             }
+//         } else if (type === 'reset') {
+//             if (!formData.password?.trim()) {
+//                 errors.password = 'New password is required';
+//             } else if (formData.password.length < 8) {
+//                 errors.password = 'Password must be at least 8 characters';
+//             }
+//             if (formData.password !== formData.confirmPassword) {
+//                 errors.confirmPassword = 'Passwords do not match';
+//             }
+//         }
+
+//         setFormErrors(errors);
+//         return Object.keys(errors).length === 0;
+//     };
+
+//     // ============================================================
+//     // OTP INPUT HANDLERS
+//     // ============================================================
+//     const handleOtpChange = (index, value) => {
+//         if (value.length > 1) return;
+//         if (!/^[0-9]*$/.test(value)) return;
+
+//         const newOtp = [...otp];
+//         newOtp[index] = value;
+//         setOtp(newOtp);
+
+//         if (value && index < 5) {
+//             document.getElementById(`otp-${index + 1}`)?.focus();
+//         }
+
+//         if (otpErrorLocal) setOtpErrorLocal('');
+//         if (otpError) setOtpErrorLocal('');
+//     };
+
+//     const handleOtpKeyDown = (index, e) => {
+//         if (e.key === 'Backspace' && !otp[index] && index > 0) {
+//             document.getElementById(`otp-${index - 1}`)?.focus();
+//         }
+//     };
+
+//     // ============================================================
+//     // HANDLE VERIFY OTP
+//     // ============================================================
+//     const handleVerifyOtp = () => {
+//         const otpCode = otp.join('');
+//         if (otpCode.length !== 6) {
+//             setOtpErrorLocal('Please enter all 6 digits');
+//             return;
+//         }
+//         onVerifyOtp({
+//             email: formData.email,
+//             otp: otpCode,
+//             purpose: 'user_registration'
+//         });
+//     };
+
+//     // ============================================================
+//     // FORM SUBMISSION
+//     // ============================================================
+//     const handleSubmit = (e) => {
+//         e.preventDefault();
+
+//         if (type === 'register') {
+//             // ✅ Validate form first
+//             if (!validate()) return;
+
+//             // ✅ Submit registration data
+//             const submitData = { ...formData };
+//             onSubmit({
+//                 first_name: submitData.firstName,
+//                 last_name: submitData.lastName,
+//                 email: submitData.email,
+//                 password: submitData.password,
+//                 mobile_number: submitData.mobileNumber,
+//                 terms_accepted: submitData.termsAccepted,
+//             });
+//         } else if (type === 'login') {
+//             if (!validate()) return;
+//             onSubmit({
+//                 email: formData.email,
+//                 password: formData.password,
+//             });
+//         } else if (type === 'forgot') {
+//             if (!validate()) return;
+//             onSubmit({ email: formData.email });
+//         } else if (type === 'reset') {
+//             if (!validate()) return;
+//             onSubmit({
+//                 newPassword: formData.password,
+//                 confirmPassword: formData.confirmPassword,
+//             });
+//         }
+//     };
+
+//     // ============================================================
+//     // PASSWORD STRENGTH
+//     // ============================================================
+//     const getPasswordStrength = (password) => {
+//         if (!password) return { label: 'Enter password', color: 'gray', width: 0 };
+//         let strength = 0;
+//         if (password.length >= 8) strength++;
+//         if (/[a-z]/.test(password)) strength++;
+//         if (/[A-Z]/.test(password)) strength++;
+//         if (/\d/.test(password)) strength++;
+//         if (/[@$!%*?&]/.test(password)) strength++;
+
+//         const levels = [
+//             { label: 'Weak', color: 'red', width: 20 },
+//             { label: 'Fair', color: 'orange', width: 40 },
+//             { label: 'Good', color: 'yellow', width: 60 },
+//             { label: 'Strong', color: 'green', width: 80 },
+//             { label: 'Very Strong', color: 'emerald', width: 100 },
+//         ];
+//         return levels[Math.min(strength, 4)];
+//     };
+
+//     const footer = type === 'login' ? { text: "Don't have an account?", linkText: 'Sign Up', linkTo: '/register' }
+//         : type === 'register' ? { text: 'Already have an account?', linkText: 'Sign In', linkTo: '/login' }
+//         : type === 'forgot' ? { text: 'Remember your password?', linkText: 'Sign In', linkTo: '/login' }
+//         : type === 'reset' ? { text: 'Remember your password?', linkText: 'Sign In', linkTo: '/login' }
+//         : null;
+
+//     // ============================================================
+//     // RENDER
+//     // ============================================================
+//     return (
+//         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+//             <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+//                 {/* Header */}
+//                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6">
+//                     <h2 className="text-2xl font-bold text-white">
+//                         {type === 'login' ? 'Welcome Back' :
+//                             type === 'register' ? 'Create Account' :
+//                                 type === 'forgot' ? 'Forgot Password' : 'Reset Password'}
+//                     </h2>
+//                     <p className="text-indigo-100 text-sm mt-1">
+//                         {type === 'login' ? 'Sign in to your account' :
+//                             type === 'register' ? 'Create your account to get started' :
+//                                 type === 'forgot' ? 'We will send you a reset link' : 'Enter your new password'}
+//                     </p>
+//                 </div>
+
+//                 <div className="p-8">
+//                     {/* Error Messages */}
+//                     {error && (
+//                         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+//                             <FiAlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
+//                             <div>
+//                                 <p className="text-sm font-medium text-red-800">Error</p>
+//                                 <p className="text-sm text-red-600">{error}</p>
+//                             </div>
+//                         </div>
+//                     )}
+
+//                     {otpError || otpErrorLocal ? (
+//                         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+//                             <FiAlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
+//                             <div>
+//                                 <p className="text-sm font-medium text-red-800">OTP Error</p>
+//                                 <p className="text-sm text-red-600">{otpError || otpErrorLocal}</p>
+//                             </div>
+//                         </div>
+//                     ) : null}
+
+//                     {otpVerified && (
+//                         <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3">
+//                             <FiCheck className="w-5 h-5 text-emerald-500 mt-0.5" />
+//                             <div>
+//                                 <p className="text-sm font-medium text-emerald-800">Verified!</p>
+//                                 <p className="text-sm text-emerald-600">Email verified successfully</p>
+//                             </div>
+//                         </div>
+//                     )}
+
+//                     <form onSubmit={handleSubmit} className="space-y-5">
+//                         {/* ============ REGISTER FIELDS ============ */}
+//                         {type === 'register' && (
+//                             <>
+//                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                                     <Input
+//                                         label="First Name"
+//                                         name="firstName"
+//                                         value={formData.firstName}
+//                                         onChange={handleChange}
+//                                         onBlur={handleBlur}
+//                                         error={touchedFields.firstName ? formErrors.firstName : ''}
+//                                         placeholder="John"
+//                                         required
+//                                         icon={<FiUser className="text-gray-400" />}
+//                                         disabled={otpSent && !otpVerified}
+//                                         className="rounded-xl"
+//                                     />
+//                                     <Input
+//                                         label="Last Name"
+//                                         name="lastName"
+//                                         value={formData.lastName}
+//                                         onChange={handleChange}
+//                                         onBlur={handleBlur}
+//                                         error={touchedFields.lastName ? formErrors.lastName : ''}
+//                                         placeholder="Doe"
+//                                         required
+//                                         disabled={otpSent && !otpVerified}
+//                                         className="rounded-xl"
+//                                     />
+//                                 </div>
+
+//                                 <Input
+//                                     label="Mobile Number"
+//                                     name="mobileNumber"
+//                                     type="tel"
+//                                     value={formData.mobileNumber}
+//                                     onChange={(e) => {
+//                                         const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+//                                         setFormData((prev) => ({ ...prev, mobileNumber: value }));
+//                                         if (formErrors.mobileNumber) {
+//                                             setFormErrors((prev) => ({ ...prev, mobileNumber: '' }));
+//                                         }
+//                                     }}
+//                                     onBlur={handleBlur}
+//                                     error={touchedFields.mobileNumber ? formErrors.mobileNumber : ''}
+//                                     placeholder="9876543210"
+//                                     required
+//                                     icon={<FiPhone className="text-gray-400" />}
+//                                     maxLength={10}
+//                                     disabled={otpSent && !otpVerified}
+//                                     className="rounded-xl"
+//                                 />
+
+//                                 <Input
+//                                     label="Email Address"
+//                                     name="email"
+//                                     type="email"
+//                                     value={formData.email}
+//                                     onChange={handleChange}
+//                                     onBlur={handleBlur}
+//                                     error={touchedFields.email ? formErrors.email : ''}
+//                                     placeholder="you@example.com"
+//                                     required
+//                                     icon={<FiMail className="text-gray-400" />}
+//                                     disabled={otpSent && !otpVerified}
+//                                     className="rounded-xl"
+//                                 />
+
+//                                 {/* Password Fields */}
+//                                 <div>
+//                                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+//                                         Password <span className="text-red-500">*</span>
+//                                     </label>
+//                                     <div className="relative">
+//                                         <Input
+//                                             name="password"
+//                                             type={showPassword ? 'text' : 'password'}
+//                                             value={formData.password}
+//                                             onChange={handleChange}
+//                                             onBlur={handleBlur}
+//                                             error={touchedFields.password ? formErrors.password : ''}
+//                                             placeholder="••••••••"
+//                                             required
+//                                             icon={<FiLock className="text-gray-400" />}
+//                                             disabled={otpSent && !otpVerified}
+//                                             className="rounded-xl pr-12"
+//                                         />
+//                                         <button
+//                                             type="button"
+//                                             onClick={() => setShowPassword(!showPassword)}
+//                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+//                                         >
+//                                             {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+//                                         </button>
+//                                     </div>
+//                                     {formData.password && (
+//                                         <div className="mt-2">
+//                                             <div className="flex items-center gap-3">
+//                                                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+//                                                     <div
+//                                                         className={`h-full transition-all duration-500 bg-${getPasswordStrength(formData.password).color}-500`}
+//                                                         style={{ width: `${getPasswordStrength(formData.password).width}%` }}
+//                                                     />
+//                                                 </div>
+//                                                 <span className={`text-xs font-medium text-${getPasswordStrength(formData.password).color}-600`}>
+//                                                     {getPasswordStrength(formData.password).label}
+//                                                 </span>
+//                                             </div>
+//                                             <p className="text-xs text-gray-400 mt-1">
+//                                                 Min 8 chars with uppercase, lowercase & number
+//                                             </p>
+//                                         </div>
+//                                     )}
+//                                 </div>
+
+//                                 <Input
+//                                     label="Confirm Password"
+//                                     name="confirmPassword"
+//                                     type={showConfirmPassword ? 'text' : 'password'}
+//                                     value={formData.confirmPassword}
+//                                     onChange={handleChange}
+//                                     onBlur={handleBlur}
+//                                     error={touchedFields.confirmPassword ? formErrors.confirmPassword : ''}
+//                                     placeholder="••••••••"
+//                                     required
+//                                     icon={<FiCheckCircle className="text-gray-400" />}
+//                                     disabled={otpSent && !otpVerified}
+//                                     className="rounded-xl"
+//                                 />
+
+//                                 {/* Terms */}
+//                                 <div className="flex items-start gap-3">
+//                                     <input
+//                                         id="terms"
+//                                         name="termsAccepted"
+//                                         type="checkbox"
+//                                         checked={formData.termsAccepted}
+//                                         onChange={handleChange}
+//                                         onBlur={handleBlur}
+//                                         className="mt-1 w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+//                                         disabled={otpSent && !otpVerified}
+//                                     />
+//                                     <label htmlFor="terms" className="text-sm text-gray-600">
+//                                         I agree to the{' '}
+//                                         <Link to="/terms" className="text-indigo-600 hover:text-indigo-700 font-medium">
+//                                             Terms of Service
+//                                         </Link>{' '}
+//                                         and{' '}
+//                                         <Link to="/privacy" className="text-indigo-600 hover:text-indigo-700 font-medium">
+//                                             Privacy Policy
+//                                         </Link>
+//                                     </label>
+//                                 </div>
+//                                 {formErrors.termsAccepted && (
+//                                     <p className="text-sm text-red-600 mt-1">{formErrors.termsAccepted}</p>
+//                                 )}
+//                             </>
+//                         )}
+
+//                         {/* ============ LOGIN FIELDS ============ */}
+//                         {type === 'login' && (
+//                             <>
+//                                 <Input
+//                                     label="Email Address"
+//                                     name="email"
+//                                     type="email"
+//                                     value={formData.email}
+//                                     onChange={handleChange}
+//                                     onBlur={handleBlur}
+//                                     error={touchedFields.email ? formErrors.email : ''}
+//                                     placeholder="you@example.com"
+//                                     required
+//                                     icon={<FiMail className="text-gray-400" />}
+//                                     className="rounded-xl"
+//                                 />
+//                                 <div>
+//                                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+//                                         Password <span className="text-red-500">*</span>
+//                                     </label>
+//                                     <div className="relative">
+//                                         <Input
+//                                             name="password"
+//                                             type={showPassword ? 'text' : 'password'}
+//                                             value={formData.password}
+//                                             onChange={handleChange}
+//                                             onBlur={handleBlur}
+//                                             error={touchedFields.password ? formErrors.password : ''}
+//                                             placeholder="••••••••"
+//                                             required
+//                                             icon={<FiLock className="text-gray-400" />}
+//                                             className="rounded-xl pr-12"
+//                                         />
+//                                         <button
+//                                             type="button"
+//                                             onClick={() => setShowPassword(!showPassword)}
+//                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+//                                         >
+//                                             {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+//                                         </button>
+//                                     </div>
+//                                 </div>
+//                                 <div className="text-right">
+//                                     <Link to="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+//                                         Forgot password?
+//                                     </Link>
+//                                 </div>
+//                             </>
+//                         )}
+
+//                         {/* ============ FORGOT PASSWORD ============ */}
+//                         {type === 'forgot' && (
+//                             <Input
+//                                 label="Email Address"
+//                                 name="email"
+//                                 type="email"
+//                                 value={formData.email}
+//                                 onChange={handleChange}
+//                                 onBlur={handleBlur}
+//                                 error={touchedFields.email ? formErrors.email : ''}
+//                                 placeholder="you@example.com"
+//                                 required
+//                                 icon={<FiMail className="text-gray-400" />}
+//                                 className="rounded-xl"
+//                             />
+//                         )}
+
+//                         {/* ============ RESET PASSWORD ============ */}
+//                         {type === 'reset' && (
+//                             <>
+//                                 <div>
+//                                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+//                                         New Password <span className="text-red-500">*</span>
+//                                     </label>
+//                                     <div className="relative">
+//                                         <Input
+//                                             name="password"
+//                                             type={showPassword ? 'text' : 'password'}
+//                                             value={formData.password}
+//                                             onChange={handleChange}
+//                                             onBlur={handleBlur}
+//                                             error={touchedFields.password ? formErrors.password : ''}
+//                                             placeholder="••••••••"
+//                                             required
+//                                             icon={<FiLock className="text-gray-400" />}
+//                                             className="rounded-xl pr-12"
+//                                         />
+//                                         <button
+//                                             type="button"
+//                                             onClick={() => setShowPassword(!showPassword)}
+//                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+//                                         >
+//                                             {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+//                                         </button>
+//                                     </div>
+//                                     {formData.password && (
+//                                         <div className="mt-2">
+//                                             <div className="flex items-center gap-3">
+//                                                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+//                                                     <div
+//                                                         className={`h-full transition-all duration-500 bg-${getPasswordStrength(formData.password).color}-500`}
+//                                                         style={{ width: `${getPasswordStrength(formData.password).width}%` }}
+//                                                     />
+//                                                 </div>
+//                                                 <span className={`text-xs font-medium text-${getPasswordStrength(formData.password).color}-600`}>
+//                                                     {getPasswordStrength(formData.password).label}
+//                                                 </span>
+//                                             </div>
+//                                         </div>
+//                                     )}
+//                                 </div>
+//                                 <Input
+//                                     label="Confirm New Password"
+//                                     name="confirmPassword"
+//                                     type={showConfirmPassword ? 'text' : 'password'}
+//                                     value={formData.confirmPassword}
+//                                     onChange={handleChange}
+//                                     onBlur={handleBlur}
+//                                     error={touchedFields.confirmPassword ? formErrors.confirmPassword : ''}
+//                                     placeholder="••••••••"
+//                                     required
+//                                     icon={<FiCheckCircle className="text-gray-400" />}
+//                                     className="rounded-xl"
+//                                 />
+//                             </>
+//                         )}
+
+//                         {/* ============ SUBMIT BUTTON + OTP SECTION ============ */}
+
+//                         {/* Show OTP section only after registration attempt */}
+//                         {otpSent && (
+//                             <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+//                                 <p className="text-sm text-gray-600 mb-3 text-center">
+//                                     Enter 6-digit OTP sent to{' '}
+//                                     <span className="font-semibold text-indigo-600">{formData.email}</span>
+//                                 </p>
+//                                 <div className="flex justify-center gap-3 mb-4">
+//                                     {otp.map((digit, index) => (
+//                                         <input
+//                                             key={index}
+//                                             id={`otp-${index}`}
+//                                             type="text"
+//                                             value={digit}
+//                                             onChange={(e) => handleOtpChange(index, e.target.value)}
+//                                             onKeyDown={(e) => handleOtpKeyDown(index, e)}
+//                                             maxLength={1}
+//                                             className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+//                                             autoFocus={index === 0}
+//                                         />
+//                                     ))}
+//                                 </div>
+//                                 <button
+//                                     type="button"
+//                                     onClick={handleVerifyOtp}
+//                                     disabled={otpLoading || otpVerified}
+//                                     className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+//                                 >
+//                                     {otpLoading ? 'Verifying...' : otpVerified ? '✅ Verified' : 'Verify OTP'}
+//                                 </button>
+//                                 <div className="text-center mt-3">
+//                                     <p className="text-sm text-gray-500">
+//                                         Didn't receive?{' '}
+//                                         {canResend ? (
+//                                             <button
+//                                                 type="button"
+//                                                 onClick={onResendOtp}
+//                                                 className="text-indigo-600 hover:text-indigo-700 font-medium"
+//                                             >
+//                                                 Resend OTP
+//                                             </button>
+//                                         ) : (
+//                                             <span>Resend in <span className="font-medium text-indigo-600">{timer}s</span></span>
+//                                         )}
+//                                     </p>
+//                                 </div>
+//                             </div>
+//                         )}
+
+//                         {/* Submit Button - changes based on state */}
+//                         <button
+//                             type="submit"
+//                             disabled={loading || (type === 'register' && otpSent && !otpVerified)}
+//                             className={`w-full py-3.5 px-4 rounded-xl font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 ${(type === 'register' && otpSent && !otpVerified)
+//                                     ? 'bg-gray-400 cursor-not-allowed'
+//                                     : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
+//                                 }`}
+//                         >
+//                             {loading ? (
+//                                 <>
+//                                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+//                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+//                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+//                                     </svg>
+//                                     Processing...
+//                                 </>
+//                             ) : (
+//                                 type === 'login' ? 'Sign In' :
+//                                     type === 'register' ? (otpSent ? (otpVerified ? 'Create Account' : 'Verify OTP First') : 'Create Account') :
+//                                         type === 'forgot' ? 'Send Reset Link' : 'Reset Password'
+//                             )}
+//                         </button>
+//                     </form>
+
+//                     {/* Footer */}
+//                     {footer && !otpSent && (
+//                         <div className="mt-6 text-center">
+//                             <p className="text-sm text-gray-600">
+//                                 {footer.text}{' '}
+//                                 <Link to={footer.linkTo} className="text-indigo-600 hover:text-indigo-700 font-medium">
+//                                     {footer.linkText}
+//                                 </Link>
+//                             </p>
+//                         </div>
+//                     )}
+//                 </div>
+//             </div>
+//         </div>
+//     );
+// };
+
+// export default AuthForm;
+
+
+
+// import React, { useState } from "react";
+// import { Link } from "react-router-dom";
+// import Input from "../../../components/forms/Input";
+// import {
+//     FiMail,
+//     FiLock,
+//     FiUser,
+//     FiPhone,
+//     FiCheckCircle,
+//     FiEye,
+//     FiEyeOff,
+//     FiCheck,
+//     FiAlertCircle,
+// } from "react-icons/fi";
+
+// const AuthForm = ({
+//     type = "login",
+//     onSubmit,
+//     onVerifyOtp,
+//     onResendOtp,
+//     loading = false,
+//     otpLoading = false,
+//     error = null,
+//     otpError = null,
+//     otpSent = false,
+//     otpVerified = false,
+//     timer = 60,
+//     canResend = false,
+// }) => {
+//     const [formData, setFormData] = useState({
+//         firstName: "",
+//         lastName: "",
+//         email: "",
+//         password: "",
+//         confirmPassword: "",
+//         mobileNumber: "",
+//         termsAccepted: false,
+//     });
+
+//     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+//     const [formErrors, setFormErrors] = useState({});
+//     const [touchedFields, setTouchedFields] = useState({});
+//     const [otpErrorLocal, setOtpErrorLocal] = useState("");
+//     const [showPassword, setShowPassword] = useState(false);
+//     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+//     const handleChange = (e) => {
+//         const { name, value, type: inputType, checked } = e.target;
+
+//         setFormData((prev) => ({
+//             ...prev,
+//             [name]: inputType === "checkbox" ? checked : value,
+//         }));
+
+//         if (formErrors[name]) {
+//             setFormErrors((prev) => ({
+//                 ...prev,
+//                 [name]: "",
+//             }));
+//         }
+//     };
+
+//     const handleMobileChange = (e) => {
+//         const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+
+//         setFormData((prev) => ({
+//             ...prev,
+//             mobileNumber: value,
+//         }));
+
+//         if (formErrors.mobileNumber) {
+//             setFormErrors((prev) => ({
+//                 ...prev,
+//                 mobileNumber: "",
+//             }));
+//         }
+//     };
+
+//     const handleBlur = (e) => {
+//         const { name } = e.target;
+
+//         setTouchedFields((prev) => ({
+//             ...prev,
+//             [name]: true,
+//         }));
+
+//         validateField(name);
+//     };
+
+//     const validateField = (fieldName) => {
+//         let message = "";
+
+//         switch (fieldName) {
+//             case "firstName":
+//                 if (type === "register" && !formData.firstName.trim()) {
+//                     message = "First name is required";
+//                 }
+//                 break;
+
+//             case "lastName":
+//                 if (type === "register" && !formData.lastName.trim()) {
+//                     message = "Last name is required";
+//                 }
+//                 break;
+
+//             case "mobileNumber":
+//                 if (type === "register" && !formData.mobileNumber) {
+//                     message = "Mobile number is required";
+//                 } else if (
+//                     type === "register" &&
+//                     !/^[0-9]{10}$/.test(formData.mobileNumber)
+//                 ) {
+//                     message = "Enter valid 10 digit mobile number";
+//                 }
+//                 break;
+
+//             case "email":
+//                 if (!formData.email.trim()) {
+//                     message = "Email is required";
+//                 } else if (
+//                     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+//                 ) {
+//                     message = "Enter valid email address";
+//                 }
+//                 break;
+
+//             case "password":
+//                 if (!formData.password) {
+//                     message = "Password is required";
+//                 } else if (formData.password.length < 8) {
+//                     message = "Password must contain minimum 8 characters";
+//                 }
+//                 break;
+
+//             case "confirmPassword":
+//                 if (
+//                     type === "register" &&
+//                     formData.password !== formData.confirmPassword
+//                 ) {
+//                     message = "Passwords do not match";
+//                 }
+//                 break;
+
+//             case "termsAccepted":
+//                 if (type === "register" && !formData.termsAccepted) {
+//                     message = "Accept terms and conditions";
+//                 }
+//                 break;
+
+//             default:
+//                 break;
+//         }
+
+//         setFormErrors((prev) => ({
+//             ...prev,
+//             [fieldName]: message,
+//         }));
+
+//         return message;
+//     };
+
+//     const validate = () => {
+//         const errors = {};
+
+//         if (type === "register") {
+//             if (!formData.firstName.trim()) {
+//                 errors.firstName = "First name is required";
+//             }
+
+//             if (!formData.lastName.trim()) {
+//                 errors.lastName = "Last name is required";
+//             }
+
+//             if (!formData.mobileNumber) {
+//                 errors.mobileNumber = "Mobile number is required";
+//             } else if (!/^[0-9]{10}$/.test(formData.mobileNumber)) {
+//                 errors.mobileNumber = "Enter valid mobile number";
+//             }
+//         }
+
+//         if (!formData.email.trim()) {
+//             errors.email = "Email is required";
+//         }
+
+//         if (!formData.password.trim() && type !== "forgot") {
+//             errors.password = "Password is required";
+//         }
+
+//         if (
+//             (type === "register" || type === "reset") &&
+//             formData.password !== formData.confirmPassword
+//         ) {
+//             errors.confirmPassword = "Passwords do not match";
+//         }
+
+//         if (type === "register" && !formData.termsAccepted) {
+//             errors.termsAccepted = "Accept terms and conditions";
+//         }
+
+//         setFormErrors(errors);
+
+//         return Object.keys(errors).length === 0;
+//     };
+
+//     const handleOtpChange = (index, value) => {
+//         if (!/^[0-9]?$/.test(value)) return;
+
+//         const updatedOtp = [...otp];
+//         updatedOtp[index] = value;
+//         setOtp(updatedOtp);
+
+//         if (value && index < 5) {
+//             document
+//                 .getElementById(`otp-${index + 1}`)
+//                 ?.focus();
+//         }
+
+//         setOtpErrorLocal("");
+//     };
+
+//     const handleOtpKeyDown = (index, e) => {
+//         if (e.key === "Backspace" && !otp[index] && index > 0) {
+//             document
+//                 .getElementById(`otp-${index - 1}`)
+//                 ?.focus();
+//         }
+//     };
+//     const verifyOtp = () => {
+//         const otpCode = otp.join("");
+
+//         if (otpCode.length !== 6) {
+//             setOtpErrorLocal("Please enter 6 digit OTP");
+//             return;
+//         }
+
+//         onVerifyOtp({
+//             email: formData.email,
+//             otp: otpCode,
+//             purpose: "user_registration",
+//         });
+//     };
+
+//     const handleSubmit = (e) => {
+//         e.preventDefault();
+
+//         if (!validate()) return;
+
+//         if (type === "register") {
+//             onSubmit({
+//                 first_name: formData.firstName,
+//                 last_name: formData.lastName,
+//                 email: formData.email,
+//                 password: formData.password,
+//                 mobile_number: formData.mobileNumber,
+//                 terms_accepted: formData.termsAccepted,
+//             });
+//         }
+
+//         if (type === "login") {
+//             onSubmit({
+//                 email: formData.email,
+//                 password: formData.password,
+//             });
+//         }
+
+//         if (type === "forgot") {
+//             onSubmit({
+//                 email: formData.email,
+//             });
+//         }
+
+//         if (type === "reset") {
+//             onSubmit({
+//                 newPassword: formData.password,
+//                 confirmPassword: formData.confirmPassword,
+//             });
+//         }
+//     };
+
+//     const getPasswordStrength = () => {
+//         const password = formData.password;
+
+//         if (!password) {
+//             return {
+//                 text: "",
+//                 width: "0%",
+//                 color: "",
+//             };
+//         }
+
+//         let score = 0;
+
+//         if (password.length >= 8) score++;
+//         if (/[a-z]/.test(password)) score++;
+//         if (/[A-Z]/.test(password)) score++;
+//         if (/[0-9]/.test(password)) score++;
+//         if (/[@$!%*?&]/.test(password)) score++;
+
+//         const strength = [
+//             {
+//                 text: "Weak",
+//                 width: "20%",
+//                 color: "bg-red-500",
+//             },
+//             {
+//                 text: "Fair",
+//                 width: "40%",
+//                 color: "bg-orange-500",
+//             },
+//             {
+//                 text: "Good",
+//                 width: "60%",
+//                 color: "bg-yellow-500",
+//             },
+//             {
+//                 text: "Strong",
+//                 width: "80%",
+//                 color: "bg-green-500",
+//             },
+//             {
+//                 text: "Very Strong",
+//                 width: "100%",
+//                 color: "bg-emerald-500",
+//             },
+//         ];
+
+//         return strength[Math.min(score, 4)];
+//     };
+
+
+//     const heading = {
+//         login: {
+//             title: "Welcome Back 👋",
+//             description: "Login to continue your marketplace journey",
+//         },
+//         register: {
+//             title: "Create Account 🚀",
+//             description: "Join our growing marketplace community",
+//         },
+//         forgot: {
+//             title: "Forgot Password 🔐",
+//             description: "Recover your account securely",
+//         },
+//         reset: {
+//             title: "Create New Password",
+//             description: "Set a strong password for your account",
+//         },
+//     };
+
+
+//     const footer = {
+//         login: {
+//             text: "Don't have an account?",
+//             link: "Create Account",
+//             path: "/register",
+//         },
+//         register: {
+//             text: "Already have an account?",
+//             link: "Login",
+//             path: "/login",
+//         },
+//         forgot: {
+//             text: "Remember password?",
+//             link: "Login",
+//             path: "/login",
+//         },
+//         reset: {
+//             text: "Remember password?",
+//             link: "Login",
+//             path: "/login",
+//         },
+//     };
+
+
+//     return (
+//         <div className="
+//             min-h-screen
+//             flex
+//             items-center
+//             justify-center
+//             bg-gradient-to-br
+//             from-indigo-50
+//             via-white
+//             to-purple-50
+//             px-4
+//             py-10
+//         ">
+//             <div className="
+//                 w-full
+//                 max-w-xl
+//                 bg-white
+//                 rounded-3xl
+//                 shadow-2xl
+//                 border
+//                 border-gray-100
+//                 overflow-hidden
+//             ">
+
+//                 <div className="
+//                     bg-gradient-to-r
+//                     from-indigo-600
+//                     to-purple-600
+//                     px-8
+//                     py-7
+//                     text-white
+//                 ">
+//                     <div className="
+//                         flex
+//                         items-center
+//                         gap-3
+//                         mb-4
+//                     ">
+//                         <div className="
+//                             w-12
+//                             h-12
+//                             rounded-2xl
+//                             bg-orange-400
+//                             flex
+//                             items-center
+//                             justify-center
+//                         ">
+//                             <FiUser
+//                                 className="
+//                                     text-gray-900
+//                                     text-xl
+//                                 "
+//                             />
+//                         </div>
+
+//                         <div>
+//                             <h1 className="
+//                                 text-xl
+//                                 font-bold
+//                             ">
+//                                 E-Commerce
+//                             </h1>
+
+//                             <p className="
+//                                 text-xs
+//                                 tracking-widest
+//                                 text-indigo-100
+//                             ">
+//                                 MARKETPLACE
+//                             </p>
+//                         </div>
+//                     </div>
+
+//                     <h2 className="
+//                         text-3xl
+//                         font-bold
+//                     ">
+//                         {heading[type].title}
+//                     </h2>
+
+//                     <p className="
+//                         mt-2
+//                         text-indigo-100
+//                     ">
+//                         {heading[type].description}
+//                     </p>
+//                 </div>
+
+
+//                 <div className="p-8">
+
+//                     {error && (
+//                         <div className="
+//                             mb-5
+//                             flex
+//                             gap-3
+//                             p-4
+//                             rounded-xl
+//                             bg-red-50
+//                             border
+//                             border-red-200
+//                         ">
+//                             <FiAlertCircle
+//                                 className="
+//                                     text-red-500
+//                                     mt-1
+//                                 "
+//                             />
+
+//                             <p className="
+//                                 text-sm
+//                                 text-red-600
+//                             ">
+//                                 {error}
+//                             </p>
+//                         </div>
+//                     )}
+
+//                     {(otpError || otpErrorLocal) && (
+//                         <div className="
+//                             mb-5
+//                             flex
+//                             gap-3
+//                             p-4
+//                             rounded-xl
+//                             bg-red-50
+//                             border
+//                             border-red-200
+//                         ">
+//                             <FiAlertCircle
+//                                 className="
+//                                     text-red-500
+//                                     mt-1
+//                                 "
+//                             />
+
+//                             <p className="
+//                                 text-sm
+//                                 text-red-600
+//                             ">
+//                                 {otpError || otpErrorLocal}
+//                             </p>
+//                         </div>
+//                     )}
+
+
+//                     {otpVerified && (
+//                         <div className="
+//                             mb-5
+//                             flex
+//                             gap-3
+//                             p-4
+//                             rounded-xl
+//                             bg-green-50
+//                             border
+//                             border-green-200
+//                         ">
+//                             <FiCheck
+//                                 className="
+//                                     text-green-600
+//                                     mt-1
+//                                 "
+//                             />
+
+//                             <p className="
+//                                 text-sm
+//                                 text-green-700
+//                             ">
+//                                 Email verified successfully
+//                             </p>
+//                         </div>
+//                     )}
+
+
+//                     <form
+//                         onSubmit={handleSubmit}
+//                         className="
+//                             space-y-5
+//                         "
+//                     ></form>
+
+//                     {type === "register" && (
+//                         <>
+//                             <div className="
+//                                 grid
+//                                 grid-cols-1
+//                                 md:grid-cols-2
+//                                 gap-4
+//                             ">
+//                                 <Input
+//                                     label="First Name"
+//                                     name="firstName"
+//                                     value={formData.firstName}
+//                                     onChange={handleChange}
+//                                     onBlur={handleBlur}
+//                                     placeholder="John"
+//                                     icon={<FiUser />}
+//                                     error={touchedFields.firstName && formErrors.firstName}
+//                                     disabled={otpSent && !otpVerified}
+//                                 />
+
+//                                 <Input
+//                                     label="Last Name"
+//                                     name="lastName"
+//                                     value={formData.lastName}
+//                                     onChange={handleChange}
+//                                     onBlur={handleBlur}
+//                                     placeholder="Doe"
+//                                     error={touchedFields.lastName && formErrors.lastName}
+//                                     disabled={otpSent && !otpVerified}
+//                                 />
+//                             </div>
+
+
+//                             <Input
+//                                 label="Mobile Number"
+//                                 name="mobileNumber"
+//                                 type="tel"
+//                                 value={formData.mobileNumber}
+//                                 onChange={handleMobileChange}
+//                                 onBlur={handleBlur}
+//                                 placeholder="9876543210"
+//                                 icon={<FiPhone />}
+//                                 error={touchedFields.mobileNumber && formErrors.mobileNumber}
+//                                 disabled={otpSent && !otpVerified}
+//                             />
+
+
+//                             <Input
+//                                 label="Email Address"
+//                                 name="email"
+//                                 type="email"
+//                                 value={formData.email}
+//                                 onChange={handleChange}
+//                                 onBlur={handleBlur}
+//                                 placeholder="you@example.com"
+//                                 icon={<FiMail />}
+//                                 error={touchedFields.email && formErrors.email}
+//                                 disabled={otpSent && !otpVerified}
+//                             />
+
+
+//                             <PasswordField
+//                                 label="Password"
+//                                 name="password"
+//                                 value={formData.password}
+//                                 onChange={handleChange}
+//                                 onBlur={handleBlur}
+//                                 showPassword={showPassword}
+//                                 setShowPassword={setShowPassword}
+//                                 error={formErrors.password}
+//                             />
+
+
+//                             {formData.password && (
+//                                 <div className="mt-2">
+//                                     <div className="
+//                                         h-2
+//                                         bg-gray-200
+//                                         rounded-full
+//                                         overflow-hidden
+//                                     ">
+//                                         <div
+//                                             className={`
+//                                                 h-full
+//                                                 ${getPasswordStrength().color}
+//                                                 transition-all
+//                                             `}
+//                                             style={{
+//                                                 width: getPasswordStrength().width,
+//                                             }}
+//                                         />
+//                                     </div>
+
+//                                     <p className="
+//                                         text-xs
+//                                         text-gray-500
+//                                         mt-1
+//                                     ">
+//                                         {getPasswordStrength().text}
+//                                     </p>
+//                                 </div>
+//                             )}
+
+
+//                             <PasswordField
+//                                 label="Confirm Password"
+//                                 name="confirmPassword"
+//                                 value={formData.confirmPassword}
+//                                 onChange={handleChange}
+//                                 onBlur={handleBlur}
+//                                 showPassword={showConfirmPassword}
+//                                 setShowPassword={setShowConfirmPassword}
+//                                 error={formErrors.confirmPassword}
+//                             />
+
+
+//                             <div className="
+//                                 flex
+//                                 items-start
+//                                 gap-3
+//                             ">
+//                                 <input
+//                                     type="checkbox"
+//                                     name="termsAccepted"
+//                                     checked={formData.termsAccepted}
+//                                     onChange={handleChange}
+//                                     className="
+//                                         mt-1
+//                                         w-4
+//                                         h-4
+//                                     "
+//                                 />
+
+//                                 <p className="
+//                                     text-sm
+//                                     text-gray-600
+//                                 ">
+//                                     I agree to the
+//                                     <Link
+//                                         to="/terms"
+//                                         className="
+//                                             text-indigo-600
+//                                             ml-1
+//                                         "
+//                                     >
+//                                         Terms
+//                                     </Link>
+//                                     {" "}and{" "}
+//                                     <Link
+//                                         to="/privacy"
+//                                         className="
+//                                             text-indigo-600
+//                                         "
+//                                     >
+//                                         Privacy Policy
+//                                     </Link>
+//                                 </p>
+//                             </div>
+//                         </>
+//                     )}
+
+
+
+//                     {type === "login" && (
+//                         <>
+//                             <Input
+//                                 label="Email Address"
+//                                 name="email"
+//                                 type="email"
+//                                 value={formData.email}
+//                                 onChange={handleChange}
+//                                 onBlur={handleBlur}
+//                                 placeholder="you@example.com"
+//                                 icon={<FiMail />}
+//                                 error={touchedFields.email && formErrors.email}
+//                             />
+
+
+//                             <PasswordField
+//                                 label="Password"
+//                                 name="password"
+//                                 value={formData.password}
+//                                 onChange={handleChange}
+//                                 onBlur={handleBlur}
+//                                 showPassword={showPassword}
+//                                 setShowPassword={setShowPassword}
+//                                 error={formErrors.password}
+//                             />
+
+
+//                             <div className="
+//                                 text-right
+//                             ">
+//                                 <Link
+//                                     to="/forgot-password"
+//                                     className="
+//                                         text-sm
+//                                         text-indigo-600
+//                                     "
+//                                 >
+//                                     Forgot Password?
+//                                 </Link>
+//                             </div>
+//                         </>
+//                     )}
+
+
+
+//                     {type === "forgot" && (
+//                         <Input
+//                             label="Email Address"
+//                             name="email"
+//                             type="email"
+//                             value={formData.email}
+//                             onChange={handleChange}
+//                             placeholder="you@example.com"
+//                             icon={<FiMail />}
+//                             error={formErrors.email}
+//                         />
+//                     )}
+
+
+
+//                     {type === "reset" && (
+//                         <>
+//                             <PasswordField
+//                                 label="New Password"
+//                                 name="password"
+//                                 value={formData.password}
+//                                 onChange={handleChange}
+//                                 showPassword={showPassword}
+//                                 setShowPassword={setShowPassword}
+//                             />
+
+//                             <PasswordField
+//                                 label="Confirm Password"
+//                                 name="confirmPassword"
+//                                 value={formData.confirmPassword}
+//                                 onChange={handleChange}
+//                                 showPassword={showConfirmPassword}
+//                                 setShowPassword={setShowConfirmPassword}
+//                             />
+//                         </>
+//                     )}
+
+
+
+//                     {otpSent && (
+//                         <div className="
+//                             mt-5
+//                             p-5
+//                             bg-gray-50
+//                             rounded-2xl
+//                             border
+//                         ">
+//                             <p className="
+//                                 text-center
+//                                 text-sm
+//                                 mb-4
+//                             ">
+//                                 Enter OTP sent to your email
+//                             </p>
+
+//                             <div className="
+//                                 flex
+//                                 justify-center
+//                                 gap-3
+//                             ">
+//                                 {otp.map((item, index) => (
+//                                     <input
+//                                         key={index}
+//                                         id={`otp-${index}`}
+//                                         value={item}
+//                                         onChange={(e) =>
+//                                             handleOtpChange(index, e.target.value)
+//                                         }
+//                                         onKeyDown={(e) =>
+//                                             handleOtpKeyDown(index, e)
+//                                         }
+//                                         maxLength="1"
+//                                         className="
+//                                             w-12
+//                                             h-12
+//                                             text-center
+//                                             text-xl
+//                                             font-bold
+//                                             border
+//                                             rounded-xl
+//                                         "
+//                                     />
+//                                 ))}
+//                             </div>
+
+
+//                             <button
+//                                 type="button"
+//                                 onClick={verifyOtp}
+//                                 disabled={otpLoading}
+//                                 className="
+//                                     w-full
+//                                     mt-4
+//                                     py-3
+//                                     bg-emerald-600
+//                                     text-white
+//                                     rounded-xl
+//                                 "
+//                             >
+//                                 {otpLoading ? "Verifying..." : "Verify OTP"}
+//                             </button>
+
+
+//                             <div className="
+//                                 text-center
+//                                 mt-3
+//                             ">
+//                                 {canResend ? (
+//                                     <button
+//                                         type="button"
+//                                         onClick={onResendOtp}
+//                                         className="
+//                                             text-indigo-600
+//                                         "
+//                                     >
+//                                         Resend OTP
+//                                     </button>
+//                                 ) : (
+//                                     <span className="text-sm text-gray-500">
+//                                         Resend in {timer}s
+//                                     </span>
+//                                 )}
+//                             </div>
+//                         </div>
+//                     )}
+
+
+
+//                     <button
+//                         type="submit"
+//                         disabled={loading}
+//                         className="
+//                             w-full
+//                             mt-6
+//                             py-3.5
+//                             rounded-xl
+//                             bg-gradient-to-r
+//                             from-orange-500
+//                             to-yellow-400
+//                             text-black
+//                             font-semibold
+//                             shadow-lg
+//                             hover:scale-[1.02]
+//                             transition
+//                             flex
+//                             items-center
+//                             justify-center
+//                             gap-2
+//                         "
+//                     >
+//                         {loading ? (
+//                             "Processing..."
+//                         ) : (
+//                             <>
+//                                 {type === "login" && "Login"}
+//                                 {type === "register" && "Create Account"}
+//                                 {type === "forgot" && "Send Reset Link"}
+//                                 {type === "reset" && "Reset Password"}
+//                             </>
+//                         )}
+//                     </button>
+
+
+//                     <div className="
+//                         mt-6
+//                         text-center
+//                         text-sm
+//                         text-gray-600
+//                     ">
+//                         {footer[type].text}
+
+//                         <Link
+//                             to={footer[type].path}
+//                             className="
+//                                 ml-1
+//                                 text-indigo-600
+//                                 font-semibold
+//                             "
+//                         >
+//                             {footer[type].link}
+//                         </Link>
+//                     </div>
+
+//                 </div>
+
+//             </div>
+//         </div>
+//     );
+// };
+
+// const PasswordField = ({
+//     label,
+//     name,
+//     value,
+//     onChange,
+//     onBlur,
+//     showPassword,
+//     setShowPassword,
+//     error,
+// }) => {
+//     return (
+//         <div>
+//             <Input
+//                 label={label}
+//                 name={name}
+//                 type={showPassword ? "text" : "password"}
+//                 value={value}
+//                 onChange={onChange}
+//                 onBlur={onBlur}
+//                 placeholder="••••••••"
+//                 icon={<FiLock />}
+//                 error={error}
+//             />
+
+//             <button
+//                 type="button"
+//                 onClick={() => setShowPassword(!showPassword)}
+//                 className="
+//                     absolute
+//                     right-4
+//                     -mt-9
+//                     text-gray-400
+//                 "
+//             >
+//                 {showPassword ? <FiEyeOff /> : <FiEye />}
+//             </button>
+//         </div>
+//     );
+// };
+
+// export default AuthForm;

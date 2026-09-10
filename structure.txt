@@ -1,0 +1,266 @@
+
+-> we use this structure : 
+
+src/
+│
+├── publicPages/                    # CUSTOMER / PUBLIC SIDE
+│   │
+│   ├── components/
+│   │   ├── Header/
+│   │   ├── Footer/
+│   │   ├── ProductCard/
+│   │   └── ...
+│   │
+│   └── pages/
+│       ├── Home/
+│       ├── Products/
+│       ├── ProductDetails/
+│       ├── Categories/
+│       ├── Cart/
+│       ├── Wishlist/
+│       ├── Checkout/
+│       ├── Orders/
+│       ├── OrderDetails/
+│       ├── Profile/
+│       └── Addresses/
+│
+│
+├── admin/                          # SUPER ADMIN + SUB ADMIN
+│   │
+│   ├── components/
+│   │   ├── AdminHeader/
+│   │   ├── AdminSidebar/
+│   │   ├── AdminTopbar/
+│   │   └── ...
+│   │
+│   └── pages/
+│       ├── Dashboard/
+│       │
+│       ├── Users/
+│       ├── Sellers/
+│       ├── Employees/
+│       │
+│       ├── Products/
+│       ├── Categories/
+│       ├── Inventory/
+│       │
+│       ├── Orders/
+│       ├── Payments/
+│       ├── Transactions/
+│       │
+│       ├── Returns/
+│       ├── Reviews/
+│       ├── Coupons/
+│       ├── Notifications/
+│       └── Settings/
+│
+│
+├── seller/                         # SELLER + SELLER EMPLOYEES
+│   │
+│   ├── components/
+│   │   ├── SellerHeader/
+│   │   ├── SellerSidebar/
+│   │   ├── SellerTopbar/
+│   │   └── ...
+│   │
+│   └── pages/
+│       ├── Dashboard/
+│       │
+│       ├── Products/
+│       ├── Inventory/
+│       ├── Orders/
+│       │
+│       ├── Employees/
+│       ├── Returns/
+│       ├── Reviews/
+│       ├── Payments/
+│       ├── Transactions/
+│       └── Settings/
+│
+│
+├── common/                         # SHARED / REUSABLE CODE
+│   │
+│   ├── components/
+│   │   ├── Button/
+│   │   ├── Modal/
+│   │   ├── Table/
+│   │   ├── Pagination/
+│   │   ├── Loader/
+│   │   ├── ConfirmDialog/
+│   │   ├── StatusBadge/
+│   │   └── ...
+│   │
+│   ├── utils/
+│   │   ├── dateUtils.js
+│   │   ├── formatUtils.js
+│   │   ├── orderUtils.js
+│   │   └── ...
+│   │
+│   └── constants/
+│
+│
+├── routes/
+│   ├── AppRoutes.jsx
+│   ├── PublicRoutes.jsx
+│   ├── AdminRoutes.jsx
+│   └── SellerRoutes.jsx
+│
+│
+├── guards/
+│   ├── ProtectedRoute.jsx
+│   ├── AdminRoute.jsx
+│   ├── SellerRoute.jsx
+│   └── PermissionRoute.jsx
+│
+│
+├── services/
+│   └── ApiService.js
+│
+│
+├── store/
+│   ├── store.js
+│   ├── hooks.js
+│   │
+│   └── slices/
+│       ├── authSlice.js
+│       ├── productSlice.js
+│       ├── categorySlice.js
+│       ├── cartSlice.js
+│       ├── orderSlice.js
+│       └── ...
+│
+│
+├── assets/
+│
+├── App.jsx
+└── main.jsx
+
+
+
+
+Admin Structure 
+
+admin/
+│
+├── components/
+│   ├── AdminLayout/              # Main layout wrapper
+│   ├── AdminHeader/              # Top header with profile, notifications
+│   ├── AdminSidebar/             # Side navigation
+│   ├── AdminTopbar/              # Breadcrumbs + page title
+│   ├── AdminStatsCards/          # Dashboard stats cards
+│   ├── AdminCharts/              # Charts for dashboard
+│   ├── AdminTable/               # Reusable table with actions
+│   ├── AdminFilters/             # Filter components
+│   └── AdminSearchBar/           # Search component
+│
+└── pages/
+    ├── Dashboard/                # Overview with stats & charts
+    │   ├── Dashboard.jsx
+    │   └── Dashboard.module.css
+    │
+    ├── Users/                    # Customer/User management
+    │   ├── Users.jsx
+    │   ├── UserDetails.jsx
+    │   ├── CreateUser.jsx
+    │   └── EditUser.jsx
+    │
+    ├── Roles/                    # Role CRUD (NEW - IMPORTANT)
+    │   ├── Roles.jsx
+    │   ├── CreateRole.jsx
+    │   └── EditRole.jsx
+    │
+    ├── Permissions/              # Permission management (NEW - IMPORTANT)
+    │   ├── Permissions.jsx
+    │   └── AssignPermissions.jsx
+    │
+    ├── Sellers/                  # Seller management
+    │   ├── Sellers.jsx
+    │   ├── SellerDetails.jsx
+    │   ├── ApproveSeller.jsx
+    │   └── SellerKYC.jsx
+    │
+    ├── Employees/                # Employee management
+    │   ├── Employees.jsx
+    │   ├── EmployeeDetails.jsx
+    │   └── CreateEmployee.jsx
+    │
+    ├── Products/                 # Product management
+    │   ├── Products.jsx
+    │   ├── ProductDetails.jsx
+    │   └── ApproveProduct.jsx
+    │
+    ├── Categories/               # Category CRUD
+    │   ├── Categories.jsx
+    │   ├── CreateCategory.jsx
+    │   └── EditCategory.jsx
+    │
+    ├── Inventory/                # Inventory management
+    │   └── Inventory.jsx
+    │
+    ├── Orders/                   # Order management
+    │   ├── Orders.jsx
+    │   └── OrderDetails.jsx
+    │
+    ├── Payments/                 # Payment management
+    │   ├── Payments.jsx
+    │   └── PaymentDetails.jsx
+    │
+    ├── Transactions/             # Transaction history
+    │   └── Transactions.jsx
+    │
+    ├── Returns/                  # Return management
+    │   ├── Returns.jsx
+    │   └── ReturnDetails.jsx
+    │
+    ├── Reviews/                  # Review management
+    │   ├── Reviews.jsx
+    │   └── ReviewDetails.jsx
+    │
+    ├── Coupons/                  # Coupon management
+    │   ├── Coupons.jsx
+    │   ├── CreateCoupon.jsx
+    │   └── EditCoupon.jsx
+    │
+    ├── Notifications/            # Broadcast notifications
+    │   ├── Notifications.jsx
+    │   └── SendNotification.jsx
+    │
+    └── Settings/                 # System settings
+        ├── Settings.jsx
+        ├── GeneralSettings.jsx
+        ├── EmailSettings.jsx
+        └── PaymentSettings.jsx
+
+
+
+
+Generate the Randome hash Password in backend terminal : 
+run the "node" commande in backend terminale and then paste following code :  
+
+const bcrypt = require('bcryptjs');
+
+const password = "Admin@123";
+const saltRounds = 12;
+
+bcrypt.hash(password, saltRounds).then(hash => {
+    console.log('Generated Hash:', hash);
+});
+
+
+
+
+
+Admin Panels Erros : 
+
+dashboard : 
+Currect Data does not fetch correctly 
+
+User : 
+1. user fetch hote he par jab me kisi ko employee role asigne  hu to uska Role employee hi dikhata he par vo 
+Admin me fetch hota he and jab me kisi ko super_admin ka role assign karu to koi users hi bhaar list nhi hota he
+
+2. fir jab koi user ke edit icon pe click karta hu to edit form ke anmdar us users ke old data automeitc fill nhi hote he 
+
+3. 
+
+Seller : 

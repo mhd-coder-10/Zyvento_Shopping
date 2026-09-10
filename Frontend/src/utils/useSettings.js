@@ -1,0 +1,100 @@
+// this is file used in Settings module of admin
+
+
+// import { useState, useEffect } from 'react';
+// import ApiService from '../api/ApiService';
+
+// export const useSettings = (group) => {
+//     const [settings, setSettings] = useState({});
+//     const [loading, setLoading] = useState(true);
+
+//     const fetchSettings = async () => {
+//         setLoading(true);
+//         try {
+//             const res = await ApiService.getSettings(`/admin/settings/group/${group}`);
+//             if (res.data.success) {
+//                 const mapped = {};
+//                 res.data.data.forEach(item => {
+//                     mapped[item.key] = item.value;
+//                 });
+//                 setSettings(mapped);
+//             }
+//         } catch (error) {
+//             console.error(error);
+//         } finally {
+//             setLoading(false);
+//         }
+//     };
+
+//     useEffect(() => {
+//         fetchSettings();
+//     }, [group]);
+
+//     const updateSettings = async (newSettings) => {
+//         try {
+//             await ApiService.putSettings(`/settings/group/${group}`, {
+//                 settings: newSettings
+//             });
+//             setSettings(newSettings);
+//             return true;
+//         } catch (error) {
+//             console.error(error);
+//             return false;
+//         }
+//     };
+
+//     return { settings, loading, updateSettings, refetch: fetchSettings };
+// };
+
+
+// src/utils/useSettings.js
+import { useState, useEffect } from 'react';
+import ApiService from '../api/ApiService';
+
+
+export const useSettings = (group) => {
+    const [settings, setSettings] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    const fetchSettings = async () => {
+        setLoading(true);
+        try {
+            // ✅ Full path: /admin/settings/group/:group
+            const res = await ApiService.get(`/admin/settings/group/${group}`);
+            if (res.data.success) {
+                const mapped = {};
+                res.data.data.forEach(item => {
+                    mapped[item.key] = item.value;
+                });
+                setSettings(mapped);
+            }
+        } catch (error) {
+            console.error('Failed to fetch settings:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSettings();
+    }, [group]);
+
+    const updateSettings = async (newSettings) => {
+        try {
+            // ✅ Bulk update endpoint
+            const res = await ApiService.put(`/admin/settings/group/${group}`, {
+                settings: newSettings
+            });
+            if (res.data.success) {
+                setSettings(newSettings);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Failed to update settings:', error);
+            return false;
+        }
+    };
+
+    return { settings, loading, updateSettings, refetch: fetchSettings };
+};
