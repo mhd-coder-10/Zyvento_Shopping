@@ -160,9 +160,9 @@ const ApiService = {
         });
     },
 
-    // ============ ADMIN MODULE ============  
+    // =========================== ADMIN MODULE =============================
 
-    // 1 DASHBORAD APIs 
+    // 1 DASHBORAD APIs ------------
 
     adminGetAllOrders: (params) => {
         setAuthHeaders();
@@ -176,17 +176,17 @@ const ApiService = {
         setAuthHeaders();
         return axios.get(`${API_URL}/admin/dashboard/overview`, { headers });
     },
-    
+
     getDashboardStatistics: () => {
         setAuthHeaders();
         return axios.get(`${API_URL}/admin/dashboard/statistics`, { headers });
     },
-    
+
     getDashboardCharts: (period = 'weekly') => {
         setAuthHeaders();
         return axios.get(`${API_URL}/admin/dashboard/charts?period=${period}`, { headers });
     },
-    
+
     getRecentActivity: (limit = 10) => {
         setAuthHeaders();
         return axios.get(`${API_URL}/admin/dashboard/recent-activity?limit=${limit}`, { headers });
@@ -242,9 +242,9 @@ const ApiService = {
     //         headers: headers,
     //     });
     // },
-    
 
-   
+
+
     // Get all users (with filters, pagination)
     getAllUsers: (params) => {
         setAuthHeaders();
@@ -302,85 +302,87 @@ const ApiService = {
         });
     },
 
+    // 3 SELLER MANAGEMENT APIs -------------
 
-    // 3 SELLER MANAGEMENT APIs  -----------
-    // Export Sellers
-    exportSellers: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers/export`, { headers, params, responseType: 'blob' });
-    },
-
-    // Get Seller Stats
+    // Get seller stats
     getSellerStats: () => {
         setAuthHeaders();
         return axios.get(`${API_URL}/admin/sellers/stats`, { headers });
     },
 
-    // Get All Sellers
+    // Export sellers to CSV
+    exportSellers: (params) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sellers/export`, {
+            headers,
+            params,
+            responseType: 'blob',
+        });
+    },
+
+    // Get all sellers (with filters)
     getAllSellers: (params) => {
         setAuthHeaders();
         return axios.get(`${API_URL}/admin/sellers`, { headers, params });
     },
 
-    // Get Seller By ID
-    getSellerById: (sellerId) => {
+    // Get seller details (accepts both _id and seller_code)
+    getSellerByCode: (sellerIdentifier) => {
         setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers/${sellerId}`, { headers });
+        return axios.get(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
+    },
+    
+    // Update seller details (accepts both _id and seller_code)
+    updateSellerDetails: (sellerCode, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/sellers/${sellerCode}`, data, { headers });
     },
 
-    // Update Seller Details (Business Info)
-    updateSellerDetails: (sellerId, data) => {
+    // Update seller status (single route - handles all transitions)
+    updateSellerStatus: (sellerIdentifier, data) => {
         setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerId}`, data, { headers });
+        return axios.put(`${API_URL}/admin/sellers/${sellerIdentifier}/status`, data, { headers });
     },
 
-    // Reset to Pending
-    resetToPending: (sellerId, data = {}) => {
+    // Delete seller (cascade - removes seller + user + products + employees + reviews)
+    deleteSeller: (sellerIdentifier) => {
         setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerId}/pending`, data, { headers });
+        return axios.delete(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
     },
 
-    // Deactivate Seller (Inactive)
-    deactivateSeller: (sellerId, data = {}) => {
+
+    // ============ REVIEW MANAGEMENT APIs ============
+
+    // Get review stats
+    getReviewStats: () => {
         setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerId}/inactive`, data, { headers });
+        return axios.get(`${API_URL}/admin/reviews/stats`, { headers });
     },
 
-    // Approve Seller
-    approveSeller: (sellerId, data = {}) => {
+    // Get all reviews (with filters)
+    getAllReviews: (params) => {
         setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerId}/approve`, data, { headers });
+        return axios.get(`${API_URL}/admin/reviews`, { headers, params });
     },
 
-    // Reject Seller
-    rejectSeller: (sellerId, data) => {
+    // Get review by ID
+    getReviewById: (reviewId) => {
         setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerId}/reject`, data, { headers });
+        return axios.get(`${API_URL}/admin/reviews/${reviewId}`, { headers });
     },
 
-    // Suspend Seller
-    suspendSeller: (sellerId, data) => {
+    // Moderate review (publish/hide/reject/flag/unflag)
+    moderateReview: (reviewId, data) => {
         setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerId}/suspend`, data, { headers });
+        return axios.put(`${API_URL}/admin/reviews/${reviewId}/moderate`, data, { headers });
     },
 
-    // Activate Seller
-    activateSeller: (sellerId, data = {}) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerId}/activate`, data, { headers });
-    },
 
-    // Get Seller Transactions
-    getSellerTransactions: (sellerId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers/${sellerId}/transactions`, { headers, params });
-    },
 
-    // Get Seller Performance
-    getSellerPerformance: (sellerId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers/${sellerId}/performance`, { headers, params });
-    },
+
+
+
+
 
     // 4  EMPLOYEE MANAGEMENT APIs  ----------- 
 
@@ -695,33 +697,33 @@ const ApiService = {
 
 
     // REVIEW APIs ---------------
-    getReviewDashboard: () => {
-        return axios.get(`${API_URL}/admin/reviews/dashboard`);
-    },
+    // getReviewDashboard: () => {
+    //     return axios.get(`${API_URL}/admin/reviews/dashboard`);
+    // },
 
-    getAllReviews: (params) => {
-        return axios.get(`${API_URL}/admin/reviews`, { params });
-    },
+    // getAllReviews: (params) => {
+    //     return axios.get(`${API_URL}/admin/reviews`, { params });
+    // },
 
-    getReviewDetails: (reviewCode) => {
-        return axios.get(`${API_URL}/admin/reviews/${reviewCode}`);
-    },
+    // getReviewDetails: (reviewCode) => {
+    //     return axios.get(`${API_URL}/admin/reviews/${reviewCode}`);
+    // },
 
-    moderateReview: (reviewCode, data) => {
-        return axios.patch(`${API_URL}/admin/reviews/${reviewCode}/status`, data);
-    },
+    // moderateReview: (reviewCode, data) => {
+    //     return axios.patch(`${API_URL}/admin/reviews/${reviewCode}/status`, data);
+    // },
 
-    getAllReviewReports: (params) => {
-        return axios.get(`${API_URL}/admin/reviews/reports`, { params });
-    },
+    // getAllReviewReports: (params) => {
+    //     return axios.get(`${API_URL}/admin/reviews/reports`, { params });
+    // },
 
-    updateReviewReport: (reportId, data) => {
-        return axios.patch(`${API_URL}/admin/reviews/reports/${reportId}`, data);
-    },
+    // updateReviewReport: (reportId, data) => {
+    //     return axios.patch(`${API_URL}/admin/reviews/reports/${reportId}`, data);
+    // },
 
-    getReviewAnalytics: () => {
-        return axios.get(`${API_URL}/admin/reviews/analytics`);
-    },
+    // getReviewAnalytics: () => {
+    //     return axios.get(`${API_URL}/admin/reviews/analytics`);
+    // },
 
 
     // PAYMENTS MANAGEMENT APIs ---------

@@ -1,4 +1,3 @@
-// User details page 
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -11,6 +10,7 @@ import {
 import { FaStore, FaUsersCog, FaUserTag } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import ApiService from '../../../api/ApiService';
+import AdminTopbar from '../../../components/admin/AdminTopbar';
 
 const InfoRow = ({ icon, label, value }) => (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-sky-50/60 hover:bg-sky-50 transition-colors min-w-0">
@@ -45,30 +45,57 @@ const UserDetails = () => {
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
+    const [refreshing, setRefreshing] = useState(false);
 
-    const fetchUserDetails = useCallback(async () => {
+    const fetchUserDetails = useCallback(async (silent = false) => {
         if (!userId) { setErrorMsg('No user id in URL'); setLoading(false); return; }
-        setLoading(true);
+
+        if (!silent) {
+            setLoading(true);
+        } else {
+            setRefreshing(true);
+        }
+
         setErrorMsg('');
         try {
-            const res = await ApiService.getUserById(userId);
+            // Add cache-busting timestamp to prevent browser/API caching
+            const res = await ApiService.getUserById(`${userId}?_t=${Date.now()}`);
+
             const data = res?.data?.data?.user || res?.data?.user || res?.data?.data || res?.data || null;
+
+            // console.log('🔍 Fetched user data:', data);   // Debug log
+
             if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
                 setUser(null);
                 setErrorMsg('User not found');
             } else {
-                setUser(data);
+                // Force new reference so React re-renders
+                setUser({ ...data });
+
+                if (silent) {
+                    toast.success('Data refreshed');
+                }
             }
         } catch (error) {
             console.error('Error:', error);
             setErrorMsg(error?.response?.data?.message || error?.message || 'Failed to load user');
             setUser(null);
+            if (silent) {
+                toast.error('Failed to refresh');
+            }
         } finally {
-            setLoading(false);
+            if (!silent) {
+                setLoading(false);
+            } else {
+                setRefreshing(false);
+            }
         }
     }, [userId]);
 
-    useEffect(() => { fetchUserDetails(); }, [fetchUserDetails]);
+    useEffect(
+        () => {
+            fetchUserDetails();
+        }, [fetchUserDetails]);
 
     const roleKey = String(user?.user_type || 'customer').toLowerCase().replace(/[\s-]+/g, '_');
     const isActive = String(user?.account_status || '').toLowerCase() === 'active';
@@ -146,58 +173,273 @@ const UserDetails = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-sky-50 via-[#eaf4ff] to-white pb-10">
+
             {/* HEADER */}
-            <div className="bg-white/90 backdrop-blur-sm border-b border-sky-100 sticky top-0 z-20">
-                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => navigate('/admin/users')} className="p-2.5 bg-sky-50 text-slate-800 border border-sky-200 rounded-xl hover:bg-sky-100 shrink-0">
-                            <FiArrowLeft size={20} />
-                        </button>
-                        <div className="min-w-0">
-                            <h1 className="text-slate-900 text-xl sm:text-2xl font-bold truncate">User Details</h1>
-                            <p className="text-slate-600 text-xs sm:text-sm truncate">View and manage user information</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <button onClick={fetchUserDetails} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-sky-200 text-slate-800 rounded-xl hover:bg-sky-50 text-sm">
-                            <FiRefreshCw size={16} /> <span className="hidden sm:inline">Refresh</span>
-                        </button>
+            <AdminTopbar
+                title="User Details"
+                subtitle={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
+                actions={
+                    <>
                         <button
-                            onClick={() => navigate(`/admin/users/edit/${user.user_code || userId}`)}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-sky-500 text-white rounded-xl hover:from-blue-700 hover:to-sky-600 shadow-lg shadow-blue-200 text-sm font-medium"
+                            type="button"
+
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                fetchUserDetails(true);
+                            }}
+                            disabled={refreshing}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-sky-300 hover:bg-sky-50 sm:px-4 disabled:opacity-60"
                         >
-                            <FiEdit2 size={16} /> Edit User
+                            <FiRefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Refresh
                         </button>
-                    </div>
-                </div>
-            </div>
+
+                        <button
+                            onClick={() => navigate(`/admin/users/edit/${userId}`)}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl hover:shadow-lg text-sm font-semibold transition-all"
+                            style={{
+                                background: 'linear-gradient(to right, #2563eb, #0ea5e9)',
+                                color: '#ffffff',
+                                opacity: 1,
+                                filter: 'none',
+                                boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)',
+                            }}
+                        >
+                            <FiEdit2 size={16} />
+                            <span>Edit  </span>
+                        </button>
+                    </>
+                }
+            />
 
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
-                {/* PROFILE */}
-                <div className="bg-white rounded-2xl border border-sky-100 shadow-sm p-5 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-400 flex items-center justify-center text-white text-2xl font-bold border-4 border-sky-100 shadow-md">
-                            {initials}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <h2 className="text-lg sm:text-2xl font-bold text-slate-900 truncate">
-                                {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed user'}
-                            </h2>
-                            <p className="text-sm text-slate-600 truncate">{user.email || 'No email'}</p>
-                            <div className="flex flex-wrap items-center gap-2 mt-3">
-                                {roleBadge()}
-                                {statusBadge()}
+
+                {/* ========== USER PROFILE CARD ========== */}
+                <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+                    {/* Top accent bar */}
+                    <div className="h-1.5 bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-500" />
+
+                    <div className="p-5 sm:p-6">
+
+                        {/* ========== MOBILE LAYOUT ========== */}
+                        <div className="flex flex-col lg:hidden">
+                            {/* Avatar */}
+                            <div className="flex justify-center">
+                                <div className="relative shrink-0">
+                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-lg ring-4 ring-sky-100">
+                                        {initials}
+                                    </div>
+                                    <span
+                                        className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-4 border-white ${String(user.account_status || '').toLowerCase() === 'active'
+                                                ? 'bg-emerald-500'
+                                                : 'bg-slate-400'
+                                            }`}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Centered Name + Email + Badges */}
+                            <div className="text-center mt-4">
+                                <h2
+                                    className="truncate text-xl"
+                                    style={{
+                                        color: '#0f172a',
+                                        WebkitTextFillColor: '#0f172a',
+                                        fontWeight: 900,
+                                        letterSpacing: '-0.02em',
+                                        opacity: 1,
+                                        filter: 'none',
+                                        mixBlendMode: 'normal',
+                                    }}
+                                >
+                                    {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
+                                </h2>
+
+                                <p
+                                    className="truncate text-sm mt-1"
+                                    style={{
+                                        color: '#475569',
+                                        WebkitTextFillColor: '#475569',
+                                        opacity: 1,
+                                        filter: 'none',
+                                    }}
+                                >
+                                    {user.email || 'No email'}
+                                </p>
+
+                                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                                    {roleBadge()}
+                                    {statusBadge()}
+                                </div>
+                            </div>
+
+                            {/* User Code + Joined Cards */}
+                            <div className="grid grid-cols-1 gap-2 mt-5">
+                                {/* User Code Card */}
+                                <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl">
+                                    <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                        <FiHash className="w-4 h-4 text-blue-600" />
+                                    </div>
+                                    <div className="min-w-0 text-start ml-2.5">
+                                        <p
+                                            className="text-[10px] font-bold uppercase tracking-wider"
+                                            style={{ color: '#64748b' }}
+                                        >
+                                            User Code
+                                        </p>
+                                        <p
+                                            className="text-sm font-mono font-bold truncate"
+                                            style={{
+                                                color: '#1d4ed8',
+                                                WebkitTextFillColor: '#1d4ed8',
+                                            }}
+                                        >
+                                            {user.user_code || userId}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Joined Date Card */}
+                                {user.created_at && (
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                            <FiClock className="w-4 h-4 text-slate-600" />
+                                        </div>
+                                        <div className="min-w-0 text-start ml-2.5">
+                                            <p
+                                                className="text-[10px] font-bold uppercase tracking-wider"
+                                                style={{ color: '#64748b' }}
+                                            >
+                                                Joined
+                                            </p>
+                                            <p
+                                                className="text-sm font-semibold truncate"
+                                                style={{
+                                                    color: '#0f172a',
+                                                    WebkitTextFillColor: '#0f172a',
+                                                }}
+                                            >
+                                                {new Date(user.created_at).toLocaleDateString('en-IN', {
+                                                    day: 'numeric',
+                                                    month: 'short',
+                                                    year: 'numeric',
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="text-xs text-slate-500 break-all sm:text-right">
-                            <p className="flex items-center gap-1 sm:justify-end font-mono font-semibold text-blue-600">
-                                <FiHash size={12} /> {user.user_code || userId}
-                            </p>
-                            {user.created_at && (
-                                <p className="mt-1 flex items-center gap-1 sm:justify-end">
-                                    <FiClock size={12} /> Joined {new Date(user.created_at).toLocaleDateString()}
+
+                        {/* ========== DESKTOP LAYOUT ========== */}
+                        <div className="hidden lg:flex lg:items-center gap-6">
+                            {/* Left: Avatar */}
+                            <div className="relative shrink-0">
+                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-3xl font-black shadow-lg ring-4 ring-sky-100">
+                                    {initials}
+                                </div>
+                                <span
+                                    className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-4 border-white ${String(user.account_status || '').toLowerCase() === 'active'
+                                            ? 'bg-emerald-500'
+                                            : 'bg-slate-400'
+                                        }`}
+                                />
+                            </div>
+
+                            {/* Middle: Name + Email + Badges */}
+                            <div className="min-w-0 flex-1 flex flex-col items-center justify-center gap-2 text-center">
+                                <h2
+                                    className="truncate text-2xl"
+                                    style={{
+                                        color: '#0f172a',
+                                        WebkitTextFillColor: '#0f172a',
+                                        fontWeight: 900,
+                                        letterSpacing: '-0.02em',
+                                        opacity: 1,
+                                        filter: 'none',
+                                        mixBlendMode: 'normal',
+                                    }}
+                                >
+                                    {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
+                                </h2>
+
+                                <p
+                                    className="truncate text-sm mt-1"
+                                    style={{
+                                        color: '#475569',
+                                        WebkitTextFillColor: '#475569',
+                                        opacity: 1,
+                                        filter: 'none',
+                                    }}
+                                >
+                                    {user.email || 'No email'}
                                 </p>
-                            )}
+
+                                <div className="flex flex-wrap items-center justify-start gap-2 mt-3">
+                                    {roleBadge()}
+                                    {statusBadge()}
+                                </div>
+                            </div>
+
+                            {/* Right: User Code + Joined Date Cards */}
+                            <div className="grid grid-cols-1 gap-2 w-64 shrink-0">
+
+                                {/* User Code Card */}
+                                <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl">
+                                    
+                                    <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                        <FiHash className="w-4 h-4 text-blue-600" />
+                                    </div>
+
+                                    <div className="min-w-0 text-start ml-2.5">
+                                        <p
+                                            className="text-[10px] font-bold uppercase tracking-wider"
+                                            style={{ color: '#64748b' }}
+                                        >
+                                            User Code
+                                        </p>
+                                        <p
+                                            className="text-sm font-mono font-bold truncate"
+                                            style={{
+                                                color: '#1d4ed8',
+                                                WebkitTextFillColor: '#1d4ed8',
+                                            }}
+                                        >
+                                            {user.user_code || userId}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Joined Date Card */}
+                                {user.created_at && (
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                            <FiClock className="w-4 h-4 text-slate-600" />
+                                        </div>
+                                        <div className="min-w-0 text-start ml-2.5">
+                                            <p
+                                                className="text-[10px] font-bold uppercase tracking-wider"
+                                                style={{ color: '#64748b' }}
+                                            >
+                                                Joined
+                                            </p>
+                                            <p
+                                                className="text-sm font-semibold truncate"
+                                                style={{
+                                                    color: '#0f172a',
+                                                    WebkitTextFillColor: '#0f172a',
+                                                }}
+                                            >
+                                                {new Date(user.created_at).toLocaleDateString('en-IN', {
+                                                    day: 'numeric',
+                                                    month: 'short',
+                                                    year: 'numeric',
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -217,11 +459,10 @@ const UserDetails = () => {
                             <button
                                 key={t.id}
                                 onClick={() => setActiveTab(t.id)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-                                    activeTab === t.id
-                                        ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-200'
-                                        : 'text-slate-700 hover:bg-sky-50'
-                                }`}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${activeTab === t.id
+                                    ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-200'
+                                    : 'text-slate-700 hover:bg-sky-50'
+                                    }`}
                             >
                                 {t.icon} {t.label}
                             </button>

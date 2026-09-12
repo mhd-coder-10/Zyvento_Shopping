@@ -189,107 +189,99 @@ router.delete(
     adminController.deleteUser
 );
 
-
 // ============ SELLER MANAGEMENT ROUTES ============
 
-// Export seller reports
-router.get(
-    '/sellers/export',
-    checkPermission('manage_sellers'),
-    adminController.exportSellers
-);
-
-// all Sellers
+// Get Seller Stats
 router.get(
     '/sellers/stats',
     checkPermission('manage_sellers'),
     adminController.getSellerStats
 );
 
-// LIST ALL SELLERS
+// Export Sellers to CSV
+router.get(
+    '/sellers/export',
+    checkPermission('manage_sellers'),
+    adminController.exportSellers
+);
+
+// List All Sellers
 router.get(
     '/sellers',
     checkPermission('manage_sellers'),
-    validate(adminValidation.getSellers),
+    validate(adminValidation.adminGetSellers),
     adminController.getAllSellers
 );
 
-// GET SELLER DETAILS
+// Get Seller Details (Enhanced - accepts both _id and seller_code)
 router.get(
-    '/sellers/:sellerId',
+    '/sellers/:sellerCode',
     checkPermission('manage_sellers'),
-    validate(adminValidation.sellerIdParam),
+    validate(adminValidation.adminSellerIdParam),
     adminController.getSellerDetails
 );
 
-// UPDATE SELLER DETAILS (Edit Form - Business Info)
+// Update Seller Details (Business Info)
 router.put(
-    '/sellers/:sellerId',
+    '/sellers/:sellerCode',
     checkPermission('manage_sellers'),
+    validate(adminValidation.adminUpdateSeller),
     adminController.updateSellerDetails
 );
 
-// RESET TO PENDING (New - Dedicated Route)
+// Update Seller Status (Single Route - Handles all transitions)
 router.put(
-    '/sellers/:sellerId/pending',
+    '/sellers/:sellerCode/status',
     checkPermission('manage_sellers'),
-    adminController.resetToPending
+    validate(adminValidation.adminUpdateSellerStatus),
+    adminController.updateSellerStatus
 );
 
-// DEACTIVATE SELLER (Inactive - New - Dedicated Route)
-router.put(
-    '/sellers/:sellerId/inactive',
+// Delete Seller (Cascade - Removes seller + user + products + employees + reviews)
+router.delete(
+    '/sellers/:sellerCode',
     checkPermission('manage_sellers'),
-    adminController.deactivateSeller
+    adminController.deleteSeller
 );
 
-// APPROVE SELLER
-router.put(
-    '/sellers/:sellerId/approve',
-    checkPermission('approve_sellers'),
-    validate(adminValidation.approveSeller),
-    adminController.approveSeller
-);
 
-// REJECT SELLER
-router.put(
-    '/sellers/:sellerId/reject',
-    checkPermission('approve_sellers'),
-    validate(adminValidation.rejectSeller),
-    adminController.rejectSeller
-);
 
-// SUSPEND SELLER
-router.put(
-    '/sellers/:sellerId/suspend',
-    checkPermission('suspend_sellers'),
-    validate(adminValidation.suspendSeller),
-    adminController.suspendSeller
-);
+// ============ REVIEW MANAGEMENT ROUTES ============
 
-// ACTIVATE SELLER
-router.put(
-    '/sellers/:sellerId/activate',
-    checkPermission('manage_sellers'),
-    validate(adminValidation.sellerIdParam),
-    adminController.activateSeller
-);
-
-// GET SELLER TRANSACTIONS
+// Get Review Stats
 router.get(
-    '/sellers/:sellerId/transactions',
-    checkPermission('manage_sellers'),
-    validate(adminValidation.sellerIdParam),
-    adminController.getSellerTransactions
+    '/reviews/stats',
+    checkPermission('manage_reviews'),
+    adminController.getReviewStats
 );
 
-// GET SELLER PERFORMANCE
+// List All Reviews
 router.get(
-    '/sellers/:sellerId/performance',
-    checkPermission('manage_sellers'),
-    validate(adminValidation.sellerIdParam),
-    adminController.getSellerPerformance
+    '/reviews',
+    checkPermission('manage_reviews'),
+    validate(adminValidation.adminGetReviews),
+    adminController.getAllReviews
 );
+
+// Get Review Details
+router.get(
+    '/reviews/:reviewId',
+    checkPermission('manage_reviews'),
+    validate(adminValidation.adminReviewIdParam),
+    adminController.getReviewById
+);
+
+// Moderate Review
+router.put(
+    '/reviews/:reviewId/moderate',
+    checkPermission('manage_reviews'),
+    validate(adminValidation.adminModerateReview),
+    adminController.moderateReview
+);
+
+
+
+
 
 // ============ EMPLOYEE MANAGEMENT ============
 
@@ -672,50 +664,50 @@ router.put(
 // ============ REVIEW ROUTES ============
 
 // Static Routes First!
-router.get(
-    '/reviews/dashboard',
-    checkPermission('reviews.view'),
-    adminController.getReviewDashboard
-);
+// router.get(
+//     '/reviews/dashboard',
+//     checkPermission('reviews.view'),
+//     adminController.getReviewDashboard
+// );
 
-router.get(
-    '/reviews/analytics',
-    checkPermission('reviews.analytics'),
-    adminController.getReviewAnalytics
-);
+// router.get(
+//     '/reviews/analytics',
+//     checkPermission('reviews.analytics'),
+//     adminController.getReviewAnalytics
+// );
 
-router.get(
-    '/reviews/reports',
-    checkPermission('reviews.reports'),
-    adminController.getAllReviewReports
-);
+// router.get(
+//     '/reviews/reports',
+//     checkPermission('reviews.reports'),
+//     adminController.getAllReviewReports
+// );
 
-// Main List Route
-router.get(
-    '/reviews',
-    checkPermission('reviews.view'),
-    adminController.getAllReviews
-);
+// // Main List Route
+// router.get(
+//     '/reviews',
+//     checkPermission('reviews.view'),
+//     adminController.getAllReviews
+// );
 
-// Dynamic Routes (Uses review_code now, not _id)
-router.get(
-    '/reviews/:reviewCode',
-    checkPermission('reviews.view'),
-    adminController.getReviewDetails
-);
+// // Dynamic Routes (Uses review_code now, not _id)
+// router.get(
+//     '/reviews/:reviewCode',
+//     checkPermission('reviews.view'),
+//     adminController.getReviewDetails
+// );
 
-// moderate review
-router.patch(
-    '/reviews/:reviewCode/status',
-    checkPermission('reviews.moderate'),
-    adminController.moderateReview
-);
+// // moderate review
+// router.patch(
+//     '/reviews/:reviewCode/status',
+//     checkPermission('reviews.moderate'),
+//     adminController.moderateReview
+// );
 
-router.patch(
-    '/reviews/reports/:reviewCode',
-    checkPermission('reviews.reports'),
-    adminController.updateReviewReport
-);
+// router.patch(
+//     '/reviews/reports/:reviewCode',
+//     checkPermission('reviews.reports'),
+//     adminController.updateReviewReport
+// );
 
 // ============ PAYMENT ROUTES ============
 

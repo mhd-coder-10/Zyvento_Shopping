@@ -221,12 +221,6 @@ const AppRoutes = () => {
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
 
-                {/* Users */}
-                <Route path="users" element={<Users />} />
-                <Route path="users/:userId" element={<UserDetails />} />
-                <Route path="users/create" element={<UserManagement />} />
-                <Route path="users/edit/:userId" element={<UserManagement />} />
-
                 {/* Roles */}
                 <Route path="roles" element={<Roles />} />
                 <Route path="roles/create" element={<CreateRole />} />
@@ -236,10 +230,16 @@ const AppRoutes = () => {
                 {/* Permissions */}
                 <Route path="permissions" element={<Permissions />} />
 
-                {/* Sellers */}
+                {/* Users */}
+                <Route path="users" element={<Users />} />
+                <Route path="users/:userId" element={<UserDetails />} />
+                <Route path="users/create" element={<UserManagement />} />
+                <Route path="users/edit/:userId" element={<UserManagement />} />
+
+                {/* Sellers - Order matters — most specific first */}
+                <Route path="sellers/edit/:sellerCode" element={<SellerEdit />} />
+                <Route path="sellers/:sellerCode" element={<SellerDetails />} />
                 <Route path="sellers" element={<Sellers />} />
-                <Route path="sellers/:sellerId" element={<SellerDetails />} />
-                <Route path="sellers/:sellerId/edit" element={<SellerEdit />} />
 
                 {/* Employees */}
                 <Route path="employees" element={<Employees />} />

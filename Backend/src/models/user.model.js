@@ -1,13 +1,7 @@
 
 const mongoose = require("mongoose");
+const Counter = require("./counter.model");
 
-//  COUNTER MODEL (for user_code sequence)
-const counter_schema = new mongoose.Schema({
-    _id: { type: String, required: true },
-    seq: { type: Number, default: 0 }
-}, { versionKey: false });
-
-const Counter = mongoose.models.Counter || mongoose.model('Counter', counter_schema);
 
 const user_schema = new mongoose.Schema(
     {
@@ -292,6 +286,5 @@ user_schema.index({ employee_type: 1 });
 user_schema.index({ seller_id: 1 });
 user_schema.index({ employee_id: 1 });
 user_schema.index({ role_ids: 1 });
-user_schema.index({ user_code: 1 });
 
 module.exports = mongoose.model("User", user_schema);

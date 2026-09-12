@@ -265,31 +265,6 @@ const Users = () => {
         }
     };
 
-    // const handleExport = () => {
-    //     const headers = ['Name', 'Email', 'Phone', 'Type', 'Sub-Type', 'Status', 'Joined'];
-    //     const rows = users.map((u) => [
-    //         userCode(u),
-    //         fullName(u),
-    //         emailOf(u),
-    //         phoneOf(u),
-    //         u.user_type || '',
-    //         u.sub_admin_type || u.employee_type || '',
-    //         u.account_status || '',
-    //         joinedOf(u) ? new Date(joinedOf(u)).toLocaleDateString() : '',
-    //     ]);
-    //     const csv = [
-    //         headers.join(','),
-    //         ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
-    //     ].join('\n');
-    //     const url = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    //     const a = document.createElement('a');
-    //     a.href = url;
-    //     a.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
-    //     a.click();
-    //     window.URL.revokeObjectURL(url);
-    //     toast.success('Users exported');
-    // };
-
     const handleExport = () => {
         const headers = ['User Code', 'Name', 'Email', 'Phone', 'Type', 'Sub-Type', 'Status', 'Joined'];
 
@@ -545,7 +520,7 @@ const Users = () => {
                             users.map((user) => (
                                 <div key={uid(user)} className="overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                     <div className="flex items-start gap-3">
-                                        <div className="w-11 h-11 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 text-white flex items-center justify-center text-sm font-semibold shrink-0">
+                                        <div className="w-11 h-11 mt-1 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 text-white flex items-center justify-center text-sm font-semibold shrink-0">
                                             {fullName(user).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
                                         </div>
                                         <div className="flex-1 text-left min-w-0 pl-6">

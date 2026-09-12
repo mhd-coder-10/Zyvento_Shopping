@@ -30,8 +30,7 @@ const ReviewReport = require('../../models/review_report.model');
 const Notification = require('../../models/notification.model');
 const Coupon = require("../../models/coupon.model");
 const SystemSetting = require('../../models/system_setting.model');
-
-
+const CustomerComplaint = require('../../models/customer_complaint.model');
 
 const logger = require('../../utils/logger');
 const constants = require('../../config/constants');
@@ -773,108 +772,269 @@ class AdminService {
         return { message: 'User permanently deleted', _id: user._id, email: user.email };
     }
 
-
     // ============ SELLER MANAGEMENT SERVICE ============
 
-    // Export Sellers to CSV
-    async exportSellers({ search = null, status = null } = {}) {
-        const query = {};
-        if (status) query.account_status = status;
-        if (search) {
-            query.$or = [
-                { business_name: new RegExp(search, 'i') },
-                { email: new RegExp(search, 'i') },
-                { owner_name: new RegExp(search, 'i') }
-            ];
+    // Helper: Build query for seller lookup (supports both _id and seller_code)
+    _buildSellerQuery(identifier) {
+        const mongoose = require('mongoose');
+        if (mongoose.Types.ObjectId.isValid(identifier) && String(identifier).length === 24) {
+            return { _id: identifier };
         }
-        const sellers = await Seller.find(query).lean();
-        const headers = ['Business Name', 'Owner Name', 'Email', 'Mobile', 'Status', 'Joined'];
-        const csvRows = [headers.join(',')];
-        sellers.forEach(seller => {
-            const row = [
-                `"${(seller.business_name || '').replace(/"/g, '""')}"`,
-                `"${(seller.owner_name || '').replace(/"/g, '""')}"`,
-                `"${(seller.email || '').replace(/"/g, '""')}"`,
-                `"${(seller.mobile_number || '').replace(/"/g, '""')}"`,
-                `"${(seller.account_status || '').replace(/"/g, '""')}"`,
-                `"${new Date(seller.created_at).toLocaleDateString('en-IN')}"`
-            ];
-            csvRows.push(row.join(','));
-        });
-        return csvRows.join('\n');
+        return { seller_code: identifier };
     }
 
     // Get Seller Stats
     async getSellerStats() {
-        const [totalSellers, activeSellers, pendingSellers, suspendedSellers] = await Promise.all([
+        const [
+            totalSellers,
+            activeSellers,
+            pendingSellers,
+            approvedSellers,
+            inactiveSellers,
+            suspendedSellers,
+            rejectedSellers,
+        ] = await Promise.all([
             Seller.countDocuments(),
             Seller.countDocuments({ account_status: 'active' }),
             Seller.countDocuments({ account_status: 'pending' }),
-            Seller.countDocuments({ account_status: 'suspended' })
+            Seller.countDocuments({ account_status: 'approved' }),
+            Seller.countDocuments({ account_status: 'inactive' }),
+            Seller.countDocuments({ account_status: 'suspended' }),
+            Seller.countDocuments({ account_status: 'rejected' }),
         ]);
-        return { totalSellers, activeSellers, pendingSellers, suspendedSellers };
+
+        return {
+            totalSellers,
+            activeSellers,
+            pendingSellers,
+            approvedSellers,
+            inactiveSellers,
+            suspendedSellers,
+            rejectedSellers,
+        };
     }
 
-    // Get All Sellers
-    async getAllSellers({ page = 1, limit = 10, search = null, status = null, sortBy = 'created_at', sortOrder = 'desc' } = {}) {
+    // Get All Sellers (with filters, pagination)
+    async getAllSellers({
+        page = 1,
+        limit = 10,
+        search = null,
+        accountStatus = null,
+        verificationStatus = null,
+        businessType = null,
+        sortBy = 'created_at',
+        sortOrder = 'desc',
+    }) {
         const query = {};
-        if (status) query.account_status = status;
+
+        if (accountStatus && accountStatus !== 'all') {
+            query.account_status = accountStatus;
+        }
+        if (verificationStatus && verificationStatus !== 'all') {
+            query.verification_status = verificationStatus;
+        }
+        if (businessType && businessType !== 'all') {
+            query.business_type = businessType;
+        }
+
         if (search) {
             query.$or = [
-                { business_name: new RegExp(search, 'i') },
-                { email: new RegExp(search, 'i') },
-                { owner_name: new RegExp(search, 'i') }
+                { business_name: { $regex: search, $options: 'i' } },
+                { owner_name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { mobile_number: { $regex: search, $options: 'i' } },
+                { business_registration_number: { $regex: search, $options: 'i' } },
+                { seller_code: { $regex: search, $options: 'i' } },
             ];
         }
+
         const sortOptions = {};
         sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
         const [sellers, total] = await Promise.all([
-            Seller.find(query).skip((page - 1) * limit).limit(parseInt(limit)).populate('user_id', 'full_name email').sort(sortOptions),
-            Seller.countDocuments(query)
+            Seller.find(query)
+                .populate('user_id', 'first_name last_name email mobile_number user_code profile_image account_status')
+                .populate('approved_by', 'first_name last_name')
+                .sort(sortOptions)
+                .skip((parseInt(page) - 1) * parseInt(limit))
+                .limit(parseInt(limit))
+                .lean(),
+            Seller.countDocuments(query),
         ]);
-        return { sellers, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
+
+        return {
+            sellers,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                totalPages: Math.ceil(total / parseInt(limit)) || 1,
+            },
+        };
     }
 
-    // Get Seller By ID
-    async getSellerById(sellerId) {
-        const seller = await Seller.findById(sellerId).populate('user_id', 'full_name email');
-        if (!seller) throw ApiError.notFound('Seller not found');
-        return seller;
+    // Get Seller By ID or Code (Enhanced)
+    async getSellerById(identifier) {
+   
+        const query = this._buildSellerQuery(identifier);
+
+        const seller = await Seller.findOne(query)
+            .populate('user_id', 'first_name last_name email mobile_number user_code profile_image account_status')
+            .populate('approved_by', 'first_name last_name email')
+            .lean();
+
+        if (!seller) {
+            throw ApiError.notFound('Seller not found');
+        }
+
+        const sellerId = seller._id;
+
+        // Fetch related data in parallel
+        const [
+            employees,
+            totalProducts,
+            activeProducts,
+            totalOrders,
+            recentOrders,
+            recentReviews,
+            reviewsData,
+            complaintStats,
+        ] = await Promise.all([
+            // Employees under this seller
+            Employee.find({ $or: [{ seller_id: sellerId }, { seller_ids: sellerId }] })
+                .populate('user_id', 'first_name last_name email mobile_number user_code profile_image account_status')
+                .populate('role_ids', 'role_name role_key')
+                .lean(),
+
+            // Product counts
+            Product.countDocuments({ seller_id: sellerId, deleted_at: null }),
+            Product.countDocuments({ seller_id: sellerId, status: 'active', deleted_at: null }),
+
+            // Order count
+            Order.countDocuments({ seller_id: sellerId }),
+
+            // Recent orders
+            Order.find({ seller_id: sellerId })
+                .select('order_code order_number total_amount order_status payment_status created_at')
+                .sort({ created_at: -1 })
+                .limit(5)
+                .lean(),
+
+            // Recent reviews
+            Review.find({ seller_id: sellerId, deleted_at: null })
+                .populate('user_id', 'first_name last_name user_code profile_image')
+                .populate('product_id', 'product_name product_code images')
+                .select('review_code rating title comment images status is_verified_purchase helpful_count created_at')
+                .sort({ created_at: -1 })
+                .limit(5)
+                .lean(),
+
+            // Review statistics
+            Review.aggregate([
+                {
+                    $match: {
+                        seller_id: sellerId,
+                        status: { $in: ['published', 'reported'] },
+                        deleted_at: null,
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalReviews: { $sum: 1 },
+                        averageRating: { $avg: '$rating' },
+                        fiveStar: { $sum: { $cond: [{ $eq: ['$rating', 5] }, 1, 0] } },
+                        fourStar: { $sum: { $cond: [{ $eq: ['$rating', 4] }, 1, 0] } },
+                        threeStar: { $sum: { $cond: [{ $eq: ['$rating', 3] }, 1, 0] } },
+                        twoStar: { $sum: { $cond: [{ $eq: ['$rating', 2] }, 1, 0] } },
+                        oneStar: { $sum: { $cond: [{ $eq: ['$rating', 1] }, 1, 0] } },
+                    },
+                },
+            ]),
+
+            // Complaint statistics
+            CustomerComplaint.aggregate([
+                { $match: { seller_id: sellerId, deleted_at: null } },
+                { $group: { _id: '$status', count: { $sum: 1 } } },
+            ]),
+        ]);
+
+        // Process review stats
+        const reviewStats = reviewsData[0] || {
+            totalReviews: 0,
+            averageRating: 0,
+            fiveStar: 0,
+            fourStar: 0,
+            threeStar: 0,
+            twoStar: 0,
+            oneStar: 0,
+        };
+        delete reviewStats._id;
+
+        // Process complaint stats
+        const complaintsByStatus = {
+            pending: 0,
+            under_review: 0,
+            resolved: 0,
+            rejected: 0,
+            dismissed: 0,
+            escalated: 0,
+        };
+        complaintStats.forEach((c) => {
+            if (complaintsByStatus[c._id] !== undefined) {
+                complaintsByStatus[c._id] = c.count;
+            }
+        });
+        const totalComplaints = Object.values(complaintsByStatus).reduce((a, b) => a + b, 0);
+
+        return {
+            seller,
+            employees,
+            statistics: {
+                totalProducts,
+                activeProducts,
+                totalOrders,
+                reviews: reviewStats,
+                complaints: {
+                    total: totalComplaints,
+                    ...complaintsByStatus,
+                },
+            },
+            recentOrders,
+            recentReviews,
+        };
     }
 
     // Update Seller Details (Business Info Only)
-    async updateSellerDetails(sellerId, updateData) {
-        const allowedFields = ['business_name', 'owner_name', 'email', 'mobile_number', 'business_type', 'gst_number', 'pan_number', 'business_address', 'commission_rate', 'settings'];
+    async updateSellerDetails(identifier, updateData) {
+        const query = this._buildSellerQuery(identifier);
+
+        const allowedFields = [
+            'business_name',
+            'owner_name',
+            'email',
+            'mobile_number',
+            'business_type',
+            'gst_number',
+            'pan_number',
+            'business_address',
+            'commission_rate',
+            'settings',
+        ];
+
         const filteredData = {};
         for (const field of allowedFields) {
-            if (updateData[field] !== undefined) filteredData[field] = updateData[field];
+            if (updateData[field] !== undefined) {
+                filteredData[field] = updateData[field];
+            }
         }
-        const seller = await Seller.findByIdAndUpdate(sellerId, filteredData, { new: true, runValidators: true });
-        if (!seller) throw ApiError.notFound('Seller not found');
-        return seller;
-    }
 
-    // Reset to Pending (Dedicated)
-    async resetToPending(sellerId) {
-        const seller = await Seller.findByIdAndUpdate(
-            sellerId,
-            { account_status: 'pending', verification_status: 'pending', rejection_reason: null },
-            { new: true }
-        );
-        if (!seller) throw ApiError.notFound('Seller not found');
-        return seller;
-    }
-
-    // Deactivate Seller (Set to Inactive)
-    async deactivateSeller(sellerId) {
-        const seller = await Seller.findByIdAndUpdate(
-            sellerId,
-            {
-                account_status: 'inactive',
-                updated_at: new Date()
-            },
-            { new: true, runValidators: true }
-        );
+        const seller = await Seller.findOneAndUpdate(query, filteredData, {
+            new: true,
+            runValidators: true,
+        })
+            .populate('user_id', 'first_name last_name email')
+            .populate('approved_by', 'first_name last_name');
 
         if (!seller) {
             throw ApiError.notFound('Seller not found');
@@ -883,60 +1043,416 @@ class AdminService {
         return seller;
     }
 
-    // Approve Seller
-    async approveSeller(sellerId, adminId, notes) {
-        const seller = await Seller.findByIdAndUpdate(
-            sellerId,
-            { verification_status: 'approved', account_status: 'approved', approved_by: adminId, approved_at: new Date(), rejection_reason: null },
-            { new: true }
-        );
-        if (!seller) throw ApiError.notFound('Seller not found');
-        return seller;
+    // Update Seller Status (Single Method - Handles all transitions)
+    async updateSellerStatus(identifier, newStatus, reason, notes, adminId) {
+        const query = this._buildSellerQuery(identifier);
+
+        const seller = await Seller.findOne(query);
+        if (!seller) {
+            throw ApiError.notFound('Seller not found');
+        }
+
+        const currentStatus = seller.account_status;
+
+        // Validate transition rules
+        const allowedTransitions = {
+            pending: ['approved', 'rejected'],
+            approved: ['active'],
+            active: ['inactive', 'suspended'],
+            inactive: ['active', 'suspended'],
+            suspended: ['active', 'inactive'],
+            rejected: ['pending'],
+        };
+
+        const allowed = allowedTransitions[currentStatus] || [];
+        if (!allowed.includes(newStatus)) {
+            throw ApiError.badRequest(
+                `Cannot change status from '${currentStatus}' to '${newStatus}'. Allowed: ${allowed.join(', ') || 'none'}`
+            );
+        }
+
+        // Once approved, cannot revert to pending or approved again
+        if (seller.approved_at && (newStatus === 'pending' || newStatus === 'approved')) {
+            throw ApiError.forbidden(
+                'Seller has already been approved. Cannot revert to pending or approved status.'
+            );
+        }
+
+        // Update fields based on new status
+        const updateData = { account_status: newStatus };
+
+        switch (newStatus) {
+            case 'approved':
+                updateData.verification_status = 'approved';
+                updateData.approved_by = adminId;
+                updateData.approved_at = new Date();
+                updateData.rejection_reason = null;
+                break;
+
+            case 'rejected':
+                updateData.verification_status = 'rejected';
+                updateData.rejection_reason = reason || 'Rejected by admin';
+                break;
+
+            case 'active':
+                updateData.rejection_reason = null;
+                if (seller.verification_status !== 'approved') {
+                    updateData.verification_status = 'approved';
+                }
+                if (!seller.approved_at) {
+                    updateData.approved_at = new Date();
+                    updateData.approved_by = adminId;
+                }
+                break;
+
+            case 'inactive':
+                break;
+
+            case 'suspended':
+                updateData.rejection_reason = reason || 'Suspended by admin';
+                updateData.verification_status = 'suspended';
+                break;
+
+            case 'pending':
+                updateData.verification_status = 'pending';
+                updateData.rejection_reason = null;
+                break;
+
+            default:
+                break;
+        }
+
+        // Apply update
+        Object.assign(seller, updateData);
+        await seller.save();
+
+        // Sync with User account status (for authentication + seller-side enforcement)
+        if (seller.user_id) {
+            const userStatusMap = {
+                pending: 'pending',
+                approved: 'active',
+                active: 'active',
+                inactive: 'inactive',
+                suspended: 'blocked',
+                rejected: 'inactive',
+            };
+            const userAccountStatus = userStatusMap[newStatus] || 'active';
+            await User.findByIdAndUpdate(seller.user_id, {
+                account_status: userAccountStatus,
+            });
+        }
+
+        return seller.populate([
+            { path: 'user_id', select: 'first_name last_name email user_code account_status' },
+            { path: 'approved_by', select: 'first_name last_name' },
+        ]);
     }
 
-    // Reject Seller
-    async rejectSeller(sellerId, reason) {
-        const seller = await Seller.findByIdAndUpdate(
-            sellerId,
-            { verification_status: 'rejected', account_status: 'rejected', rejection_reason: reason },
-            { new: true }
-        );
-        if (!seller) throw ApiError.notFound('Seller not found');
-        return seller;
+    // ============ DELETE SELLER (Cascade - Removes all related data) ============
+    async deleteSeller(identifier) {
+
+        const query = this._buildSellerQuery(identifier);
+
+        const seller = await Seller.findOne(query);
+        if (!seller) {
+            throw ApiError.notFound('Seller not found');
+        }
+
+        const sellerId = seller._id;
+        const sellerUserId = seller.user_id;
+
+        // ============ CASCADE DELETE ALL RELATED DATA ============
+
+        // 1. Delete all products of this seller
+        const deletedProducts = await Product.deleteMany({ seller_id: sellerId });
+
+        // 2. Delete all reviews for this seller
+        const deletedReviews = await Review.deleteMany({ seller_id: sellerId });
+
+        // 3. Delete all complaints for this seller
+        const deletedComplaints = await CustomerComplaint.deleteMany({ seller_id: sellerId });
+
+        // 4. Delete all order items for this seller (order records stay for history)
+        const deletedOrderItems = await OrderItem.deleteMany({ seller_id: sellerId });
+
+        // 5. Find and delete all employees of this seller
+        const employees = await Employee.find({
+            $or: [{ seller_id: sellerId }, { seller_ids: sellerId }],
+        }).select('user_id');
+
+        const employeeUserIds = employees.map((e) => e.user_id).filter(Boolean);
+
+        await Employee.deleteMany({
+            $or: [{ seller_id: sellerId }, { seller_ids: sellerId }],
+        });
+
+        // 6. Delete employee user accounts
+        if (employeeUserIds.length > 0) {
+            await User.deleteMany({ _id: { $in: employeeUserIds } });
+        }
+
+        // 7. Delete the linked user account (the seller's own user account)
+        if (sellerUserId) {
+            await User.deleteOne({ _id: sellerUserId });
+        }
+
+        // 8. Finally delete the seller document
+        await Seller.deleteOne({ _id: sellerId });
+
+        return {
+            success: true,
+            message: 'Seller and all related data permanently deleted',
+            deleted: {
+                seller_id: sellerId,
+                seller_code: seller.seller_code,
+                business_name: seller.business_name,
+                products_deleted: deletedProducts.deletedCount,
+                reviews_deleted: deletedReviews.deletedCount,
+                complaints_deleted: deletedComplaints.deletedCount,
+                order_items_deleted: deletedOrderItems.deletedCount,
+                employees_deleted: employees.length,
+            },
+        };
     }
 
-    // Suspend Seller
-    async suspendSeller(sellerId, reason) {
-        const seller = await Seller.findByIdAndUpdate(
-            sellerId,
-            { account_status: 'suspended', rejection_reason: reason },
-            { new: true }
-        );
-        if (!seller) throw ApiError.notFound('Seller not found');
-        return seller;
+    // Export Sellers to CSV
+    async exportSellers({ search = null, status = null } = {}) {
+        const query = {};
+        if (status && status !== 'all') query.account_status = status;
+        if (search) {
+            query.$or = [
+                { business_name: new RegExp(search, 'i') },
+                { email: new RegExp(search, 'i') },
+                { owner_name: new RegExp(search, 'i') },
+                { mobile_number: new RegExp(search, 'i') },
+                { seller_code: new RegExp(search, 'i') },
+            ];
+        }
+
+        const sellers = await Seller.find(query)
+            .populate('user_id', 'user_code')
+            .lean();
+
+        const headers = [
+            'Seller Code',
+            'Business Name',
+            'Owner Name',
+            'Email',
+            'Mobile',
+            'Business Type',
+            'Verification Status',
+            'Account Status',
+            'Commission Rate',
+            'Total Orders',
+            'Total Revenue',
+            'Rating',
+            'Joined',
+        ];
+
+        const csvRows = [headers.join(',')];
+
+        sellers.forEach((seller) => {
+            const row = [
+                seller.seller_code || 'N/A',
+                seller.business_name || '',
+                seller.owner_name || '',
+                seller.email || '',
+                seller.mobile_number || '',
+                seller.business_type || 'individual',
+                seller.verification_status || 'pending',
+                seller.account_status || 'pending',
+                seller.commission_rate || 10,
+                seller.total_orders || 0,
+                seller.total_revenue || 0,
+                seller.rating || 0,
+                seller.created_at ? new Date(seller.created_at).toLocaleDateString('en-IN') : '',
+            ];
+            csvRows.push(
+                row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+            );
+        });
+
+        return csvRows.join('\n');
     }
 
-    // Activate Seller (Active hone par user seller ban jaata hai)
-    async activateSeller(sellerId) {
-        const seller = await Seller.findByIdAndUpdate(
-            sellerId,
-            { account_status: 'active', rejection_reason: null },
-            { new: true }
-        );
-        if (!seller) throw ApiError.notFound('Seller not found');
-        await User.findByIdAndUpdate(seller.user_id, { user_type: 'seller' });
-        return seller;
+
+
+    
+    // ============ REVIEW MANAGEMENT SERVICE ============
+
+    // Get All Reviews (with filters)
+    async getAllReviews({
+        page = 1,
+        limit = 10,
+        search = null,
+        status = null,
+        rating = null,
+        sellerId = null,
+        productId = null,
+        reportCountMin = null,
+        sortBy = 'created_at',
+        sortOrder = 'desc',
+    }) {
+        
+        const query = { deleted_at: null };
+
+        if (status && status !== 'all') query.status = status;
+        if (rating) query.rating = rating;
+        if (sellerId) query.seller_id = sellerId;
+        if (productId) query.product_id = productId;
+        if (reportCountMin !== null) query.report_count = { $gte: reportCountMin };
+
+        if (search) {
+            query.$or = [
+                { review_code: { $regex: search, $options: 'i' } },
+                { title: { $regex: search, $options: 'i' } },
+                { comment: { $regex: search, $options: 'i' } },
+                { product_code: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        const [reviews, total] = await Promise.all([
+            Review.find(query)
+                .populate('user_id', 'first_name last_name email user_code profile_image')
+                .populate('product_id', 'product_name product_code images')
+                .populate('seller_id', 'business_name')
+                .sort(sortOptions)
+                .skip((parseInt(page) - 1) * parseInt(limit))
+                .limit(parseInt(limit))
+                .lean(),
+            Review.countDocuments(query),
+        ]);
+
+        return {
+            reviews,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                totalPages: Math.ceil(total / parseInt(limit)) || 1,
+            },
+        };
     }
 
-    // Get Seller Transactions
-    async getSellerTransactions(sellerId, { page = 1, limit = 10 } = {}) {
-        return { transactions: [], pagination: { page: parseInt(page), limit: parseInt(limit), total: 0, totalPages: 0 } };
+    // Get Review Stats
+    async getReviewStats() {
+        const Review = require('../models/review.model');
+        const [
+            totalReviews,
+            publishedReviews,
+            pendingReviews,
+            flaggedReviews,
+            reportedReviews,
+            hiddenReviews,
+            rejectedReviews,
+            avgRatingAgg,
+        ] = await Promise.all([
+            Review.countDocuments({ deleted_at: null }),
+            Review.countDocuments({ status: 'published', deleted_at: null }),
+            Review.countDocuments({ status: 'pending', deleted_at: null }),
+            Review.countDocuments({ status: 'flagged', deleted_at: null }),
+            Review.countDocuments({ status: 'reported', deleted_at: null }),
+            Review.countDocuments({ status: 'hidden', deleted_at: null }),
+            Review.countDocuments({ status: 'rejected', deleted_at: null }),
+            Review.aggregate([
+                { $match: { deleted_at: null, status: { $in: ['published', 'reported'] } } },
+                { $group: { _id: null, avg: { $avg: '$rating' } } },
+            ]),
+        ]);
+
+        return {
+            totalReviews,
+            publishedReviews,
+            pendingReviews,
+            flaggedReviews,
+            reportedReviews,
+            hiddenReviews,
+            rejectedReviews,
+            averageRating: avgRatingAgg[0]?.avg
+                ? parseFloat(avgRatingAgg[0].avg.toFixed(2))
+                : 0,
+        };
     }
 
-    // Get Seller Performance
-    async getSellerPerformance(sellerId, period = 'monthly') {
-        return { total_orders: 0, total_revenue: 0, avg_rating: 0, period };
+    // Get Review By ID
+    async getReviewById(reviewId) {
+        const Review = require('../models/review.model');
+        const review = await Review.findById(reviewId)
+            .populate('user_id', 'first_name last_name email user_code profile_image')
+            .populate('product_id', 'product_name product_code images price')
+            .populate('seller_id', 'business_name email')
+            .populate('order_id', 'order_code order_number')
+            .populate('moderated_by', 'first_name last_name')
+            .populate('moderation_history.admin_id', 'first_name last_name');
+
+        if (!review) {
+            throw ApiError.notFound('Review not found');
+        }
+
+        return review;
     }
+
+    // Moderate Review (Publish/Hide/Reject/Flag)
+    async moderateReview(reviewId, action, reason, adminComment, adminId) {
+        const review = await Review.findById(reviewId);
+        if (!review) {
+            throw ApiError.notFound('Review not found');
+        }
+
+        const previousStatus = review.status;
+        let newStatus = previousStatus;
+
+        switch (action) {
+            case 'publish':
+                newStatus = 'published';
+                review.published_at = new Date();
+                break;
+            case 'hide':
+                newStatus = 'hidden';
+                review.hidden_at = new Date();
+                break;
+            case 'reject':
+                newStatus = 'rejected';
+                review.rejected_at = new Date();
+                break;
+            case 'flag':
+                newStatus = 'flagged';
+                break;
+            case 'unflag':
+                newStatus = 'published';
+                break;
+            default:
+                throw ApiError.badRequest('Invalid moderation action');
+        }
+
+        review.status = newStatus;
+        review.moderation_reason = reason || null;
+        review.admin_comment = adminComment || review.admin_comment;
+        review.moderated_by = adminId;
+        review.moderated_at = new Date();
+
+        // Add to moderation history
+        review.moderation_history.push({
+            action,
+            previous_status: previousStatus,
+            new_status: newStatus,
+            reason: reason || '',
+            admin_id: adminId,
+            timestamp: new Date(),
+        });
+
+        await review.save();
+
+        return review;
+    }
+
+
+
+
+
 
     // ============ EMPLOYEE MANAGEMENT  ============
 
@@ -2406,257 +2922,257 @@ class AdminService {
     // ============ REVIEW MODULE ============
 
     // Get Review Dashboard Stats
-    async getReviewDashboard() {
-        const [total, published, pending, flagged, reported, hidden, rejected, avgRating] = await Promise.all([
-            Review.countDocuments({ deleted_at: null }),
-            Review.countDocuments({ status: 'published', deleted_at: null }),
-            Review.countDocuments({ status: 'pending', deleted_at: null }),
-            Review.countDocuments({ status: 'flagged', deleted_at: null }),
-            Review.countDocuments({ status: 'reported', deleted_at: null }),
-            Review.countDocuments({ status: 'hidden', deleted_at: null }),
-            Review.countDocuments({ status: 'rejected', deleted_at: null }),
-            Review.aggregate([
-                { $match: { status: 'published', deleted_at: null } },
-                { $group: { _id: null, avg: { $avg: '$rating' } } }
-            ])
-        ]);
+    // async getReviewDashboard() {
+    //     const [total, published, pending, flagged, reported, hidden, rejected, avgRating] = await Promise.all([
+    //         Review.countDocuments({ deleted_at: null }),
+    //         Review.countDocuments({ status: 'published', deleted_at: null }),
+    //         Review.countDocuments({ status: 'pending', deleted_at: null }),
+    //         Review.countDocuments({ status: 'flagged', deleted_at: null }),
+    //         Review.countDocuments({ status: 'reported', deleted_at: null }),
+    //         Review.countDocuments({ status: 'hidden', deleted_at: null }),
+    //         Review.countDocuments({ status: 'rejected', deleted_at: null }),
+    //         Review.aggregate([
+    //             { $match: { status: 'published', deleted_at: null } },
+    //             { $group: { _id: null, avg: { $avg: '$rating' } } }
+    //         ])
+    //     ]);
 
-        // Rating distribution
-        const ratingDistribution = await Review.aggregate([
-            { $match: { deleted_at: null } },
-            { $group: { _id: '$rating', count: { $sum: 1 } } },
-            { $sort: { _id: -1 } }
-        ]);
+    //     // Rating distribution
+    //     const ratingDistribution = await Review.aggregate([
+    //         { $match: { deleted_at: null } },
+    //         { $group: { _id: '$rating', count: { $sum: 1 } } },
+    //         { $sort: { _id: -1 } }
+    //     ]);
 
-        const ratingMap = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        ratingDistribution.forEach(item => {
-            ratingMap[item._id] = item.count;
-        });
+    //     const ratingMap = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    //     ratingDistribution.forEach(item => {
+    //         ratingMap[item._id] = item.count;
+    //     });
 
-        // Recent trends (last 7 days)
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const recentReviews = await Review.countDocuments({ created_at: { $gte: sevenDaysAgo }, deleted_at: null });
+    //     // Recent trends (last 7 days)
+    //     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    //     const recentReviews = await Review.countDocuments({ created_at: { $gte: sevenDaysAgo }, deleted_at: null });
 
-        return {
-            total,
-            published,
-            pending,
-            flagged,
-            reported,
-            hidden,
-            rejected,
-            average_rating: avgRating[0]?.avg || 0,
-            rating_distribution: ratingMap,
-            reviews_last_7_days: recentReviews
-        };
-    }
+    //     return {
+    //         total,
+    //         published,
+    //         pending,
+    //         flagged,
+    //         reported,
+    //         hidden,
+    //         rejected,
+    //         average_rating: avgRating[0]?.avg || 0,
+    //         rating_distribution: ratingMap,
+    //         reviews_last_7_days: recentReviews
+    //     };
+    // }
 
-    // Get All Reviews (List + Search + Filters + Pagination)
-    async getAllReviews({ page = 1, limit = 10, search = null, status = null, rating = null, verified = null, sellerId = null, productId = null, sortBy = 'newest' } = {}) {
-        const query = { deleted_at: null };
+    // // Get All Reviews (List + Search + Filters + Pagination)
+    // async getAllReviews({ page = 1, limit = 10, search = null, status = null, rating = null, verified = null, sellerId = null, productId = null, sortBy = 'newest' } = {}) {
+    //     const query = { deleted_at: null };
 
-        // Filters
-        if (status && status !== 'all') query.status = status;
-        if (rating && rating !== 'all') query.rating = parseInt(rating);
-        if (verified && verified !== 'all') query.is_verified_purchase = verified === 'true';
+    //     // Filters
+    //     if (status && status !== 'all') query.status = status;
+    //     if (rating && rating !== 'all') query.rating = parseInt(rating);
+    //     if (verified && verified !== 'all') query.is_verified_purchase = verified === 'true';
 
-        if (sellerId) query.seller_id = sellerId;
-        if (productId) query.product_id = productId;
+    //     if (sellerId) query.seller_id = sellerId;
+    //     if (productId) query.product_id = productId;
 
-        // Search
-        if (search) {
-            const regex = new RegExp(search, 'i');
-            // Find matching products and users first
-            const [matchedProducts, matchedUsers] = await Promise.all([
-                Product.find({ product_name: regex }).select('_id'),
-                User.find({ $or: [{ first_name: regex }, { last_name: regex }, { email: regex }] }).select('_id')
-            ]);
+    //     // Search
+    //     if (search) {
+    //         const regex = new RegExp(search, 'i');
+    //         // Find matching products and users first
+    //         const [matchedProducts, matchedUsers] = await Promise.all([
+    //             Product.find({ product_name: regex }).select('_id'),
+    //             User.find({ $or: [{ first_name: regex }, { last_name: regex }, { email: regex }] }).select('_id')
+    //         ]);
 
-            query.$or = [
-                { title: regex },
-                { comment: regex },
-                { review_code: regex },
-                { product_id: { $in: matchedProducts.map(p => p._id) } },
-                { user_id: { $in: matchedUsers.map(u => u._id) } }
-            ];
-        }
+    //         query.$or = [
+    //             { title: regex },
+    //             { comment: regex },
+    //             { review_code: regex },
+    //             { product_id: { $in: matchedProducts.map(p => p._id) } },
+    //             { user_id: { $in: matchedUsers.map(u => u._id) } }
+    //         ];
+    //     }
 
-        // Sorting
-        let sortOptions = { created_at: -1 }; // default: newest first
-        if (sortBy === 'oldest') sortOptions = { created_at: 1 };
-        if (sortBy === 'highest_rating') sortOptions = { rating: -1 };
-        if (sortBy === 'lowest_rating') sortOptions = { rating: 1 };
-        if (sortBy === 'most_reported') sortOptions = { report_count: -1 };
+    //     // Sorting
+    //     let sortOptions = { created_at: -1 }; // default: newest first
+    //     if (sortBy === 'oldest') sortOptions = { created_at: 1 };
+    //     if (sortBy === 'highest_rating') sortOptions = { rating: -1 };
+    //     if (sortBy === 'lowest_rating') sortOptions = { rating: 1 };
+    //     if (sortBy === 'most_reported') sortOptions = { report_count: -1 };
 
-        const [reviews, total] = await Promise.all([
-            Review.find(query)
-                .populate('user_id', 'first_name last_name email')
-                .populate('product_id', 'product_name product_code images')
-                .populate('seller_id', 'business_name')
-                .populate('order_id', 'order_code')
-                .sort(sortOptions)
-                .skip((page - 1) * limit)
-                .limit(parseInt(limit)),
-            Review.countDocuments(query)
-        ]);
+    //     const [reviews, total] = await Promise.all([
+    //         Review.find(query)
+    //             .populate('user_id', 'first_name last_name email')
+    //             .populate('product_id', 'product_name product_code images')
+    //             .populate('seller_id', 'business_name')
+    //             .populate('order_id', 'order_code')
+    //             .sort(sortOptions)
+    //             .skip((page - 1) * limit)
+    //             .limit(parseInt(limit)),
+    //         Review.countDocuments(query)
+    //     ]);
 
-        return {
-            reviews,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                totalPages: Math.ceil(total / limit)
-            }
-        };
-    }
+    //     return {
+    //         reviews,
+    //         pagination: {
+    //             page: parseInt(page),
+    //             limit: parseInt(limit),
+    //             total,
+    //             totalPages: Math.ceil(total / limit)
+    //         }
+    //     };
+    // }
 
-    // Get Review Details
-    async getReviewDetails(reviewCode) {
-        const review = await Review.findOne({ review_code: reviewCode, deleted_at: null })
-            .populate('user_id', 'first_name last_name email _id')
-            .populate('product_id', 'product_name product_code images category_id sub_category_id')
-            .populate('seller_id', 'business_name _id')
-            .populate('order_id', 'order_code')
-            .populate('order_item_id', 'quantity price')
-            .populate('moderated_by', 'first_name last_name email')
-            .populate('moderation_history.admin_id', 'first_name last_name');
+    // // Get Review Details
+    // async getReviewDetails(reviewCode) {
+    //     const review = await Review.findOne({ review_code: reviewCode, deleted_at: null })
+    //         .populate('user_id', 'first_name last_name email _id')
+    //         .populate('product_id', 'product_name product_code images category_id sub_category_id')
+    //         .populate('seller_id', 'business_name _id')
+    //         .populate('order_id', 'order_code')
+    //         .populate('order_item_id', 'quantity price')
+    //         .populate('moderated_by', 'first_name last_name email')
+    //         .populate('moderation_history.admin_id', 'first_name last_name');
 
-        if (!review) throw ApiError.notFound('Review not found');
-        return review;
-    }
+    //     if (!review) throw ApiError.notFound('Review not found');
+    //     return review;
+    // }
 
-    // Moderate Review (Publish, Hide, Flag, Reject, Restore)
-    async moderateReview(reviewCode, { action, reason }, adminId) {
-        // IMPORTANT: Search by review_code, NOT _id
-        const review = await Review.findOne({ review_code: reviewCode, deleted_at: null });
-        if (!review) throw ApiError.notFound('Review not found');
+    // // Moderate Review (Publish, Hide, Flag, Reject, Restore)
+    // async moderateReview(reviewCode, { action, reason }, adminId) {
+    //     // IMPORTANT: Search by review_code, NOT _id
+    //     const review = await Review.findOne({ review_code: reviewCode, deleted_at: null });
+    //     if (!review) throw ApiError.notFound('Review not found');
 
-        let newStatus = review.status;
-        if (action === 'publish') newStatus = 'published';
-        if (action === 'hide') newStatus = 'hidden';
-        if (action === 'flag') newStatus = 'flagged';
-        if (action === 'reject') newStatus = 'rejected';
-        if (action === 'restore') newStatus = 'published';
+    //     let newStatus = review.status;
+    //     if (action === 'publish') newStatus = 'published';
+    //     if (action === 'hide') newStatus = 'hidden';
+    //     if (action === 'flag') newStatus = 'flagged';
+    //     if (action === 'reject') newStatus = 'rejected';
+    //     if (action === 'restore') newStatus = 'published';
 
-        const validTransitions = {
-            pending: ['published', 'rejected'],
-            published: ['flagged', 'hidden', 'rejected'],
-            flagged: ['published', 'hidden', 'rejected'],
-            reported: ['published', 'hidden', 'flagged', 'rejected'],
-            hidden: ['published', 'rejected'],
-            rejected: ['published']
-        };
+    //     const validTransitions = {
+    //         pending: ['published', 'rejected'],
+    //         published: ['flagged', 'hidden', 'rejected'],
+    //         flagged: ['published', 'hidden', 'rejected'],
+    //         reported: ['published', 'hidden', 'flagged', 'rejected'],
+    //         hidden: ['published', 'rejected'],
+    //         rejected: ['published']
+    //     };
 
-        if (!validTransitions[review.status]?.includes(newStatus)) {
-            throw ApiError.badRequest(`Invalid status transition from ${review.status} to ${newStatus}`);
-        }
+    //     if (!validTransitions[review.status]?.includes(newStatus)) {
+    //         throw ApiError.badRequest(`Invalid status transition from ${review.status} to ${newStatus}`);
+    //     }
 
-        const previousStatus = review.status;
-        review.status = newStatus;
-        review.moderated_by = adminId;
-        review.moderated_at = new Date();
-        review.moderation_reason = reason || 'No reason provided';
+    //     const previousStatus = review.status;
+    //     review.status = newStatus;
+    //     review.moderated_by = adminId;
+    //     review.moderated_at = new Date();
+    //     review.moderation_reason = reason || 'No reason provided';
 
-        if (newStatus === 'published') review.published_at = new Date();
-        if (newStatus === 'hidden') review.hidden_at = new Date();
-        if (newStatus === 'rejected') review.rejected_at = new Date();
+    //     if (newStatus === 'published') review.published_at = new Date();
+    //     if (newStatus === 'hidden') review.hidden_at = new Date();
+    //     if (newStatus === 'rejected') review.rejected_at = new Date();
 
-        review.moderation_history.push({
-            action,
-            previous_status: previousStatus,
-            new_status: newStatus,
-            reason,
-            admin_id: adminId,
-            timestamp: new Date()
-        });
+    //     review.moderation_history.push({
+    //         action,
+    //         previous_status: previousStatus,
+    //         new_status: newStatus,
+    //         reason,
+    //         admin_id: adminId,
+    //         timestamp: new Date()
+    //     });
 
-        await review.save();
+    //     await review.save();
 
-        // Recalculate product rating if published
-        if (newStatus === 'published') {
-            await this.recalculateProductRating(review.product_id);
-        }
+    //     // Recalculate product rating if published
+    //     if (newStatus === 'published') {
+    //         await this.recalculateProductRating(review.product_id);
+    //     }
 
-        return review;
-    }
+    //     return review;
+    // }
 
-    // Recalculate Product Rating
-    async recalculateProductRating(productId) {
-        const result = await Review.aggregate([
-            { $match: { product_id: productId, status: 'published', deleted_at: null } },
-            { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } }
-        ]);
+    // // Recalculate Product Rating
+    // async recalculateProductRating(productId) {
+    //     const result = await Review.aggregate([
+    //         { $match: { product_id: productId, status: 'published', deleted_at: null } },
+    //         { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } }
+    //     ]);
 
-        await Product.findByIdAndUpdate(productId, {
-            rating: result[0]?.avg || 0,
-            total_reviews: result[0]?.count || 0
-        });
-    }
+    //     await Product.findByIdAndUpdate(productId, {
+    //         rating: result[0]?.avg || 0,
+    //         total_reviews: result[0]?.count || 0
+    //     });
+    // }
 
-    // Get Review Reports
-    async getAllReviewReports({ page = 1, limit = 10, search = null, status = null } = {}) {
-        const query = {};
-        if (status && status !== 'all') query.status = status;
+    // // Get Review Reports
+    // async getAllReviewReports({ page = 1, limit = 10, search = null, status = null } = {}) {
+    //     const query = {};
+    //     if (status && status !== 'all') query.status = status;
 
-        if (search) {
-            const regex = new RegExp(search, 'i');
-            const [matchedReviews] = await Promise.all([
-                Review.find({ $or: [{ comment: regex }, { title: regex }] }).select('_id')
-            ]);
-            query.$or = [
-                { reason: regex },
-                { description: regex },
-                { review_id: { $in: matchedReviews.map(r => r._id) } }
-            ];
-        }
+    //     if (search) {
+    //         const regex = new RegExp(search, 'i');
+    //         const [matchedReviews] = await Promise.all([
+    //             Review.find({ $or: [{ comment: regex }, { title: regex }] }).select('_id')
+    //         ]);
+    //         query.$or = [
+    //             { reason: regex },
+    //             { description: regex },
+    //             { review_id: { $in: matchedReviews.map(r => r._id) } }
+    //         ];
+    //     }
 
-        const [reports, total] = await Promise.all([
-            ReviewReport.find(query)
-                .populate('review_id', 'title comment rating status')
-                .populate('product_id', 'product_name product_code')
-                .populate('customer_id', 'first_name last_name email')
-                .populate('reported_by', 'first_name last_name email')
-                .sort({ created_at: -1 })
-                .skip((page - 1) * limit).limit(parseInt(limit)),
-            ReviewReport.countDocuments(query)
-        ]);
+    //     const [reports, total] = await Promise.all([
+    //         ReviewReport.find(query)
+    //             .populate('review_id', 'title comment rating status')
+    //             .populate('product_id', 'product_name product_code')
+    //             .populate('customer_id', 'first_name last_name email')
+    //             .populate('reported_by', 'first_name last_name email')
+    //             .sort({ created_at: -1 })
+    //             .skip((page - 1) * limit).limit(parseInt(limit)),
+    //         ReviewReport.countDocuments(query)
+    //     ]);
 
-        return { reports, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
-    }
+    //     return { reports, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
+    // }
 
-    // Update Report Status
-    async updateReviewReport(reportId, { status, action }, adminId) {
-        const report = await ReviewReport.findById(reportId);
-        if (!report) throw ApiError.notFound('Report not found');
+    // // Update Report Status
+    // async updateReviewReport(reportId, { status, action }, adminId) {
+    //     const report = await ReviewReport.findById(reportId);
+    //     if (!report) throw ApiError.notFound('Report not found');
 
-        report.status = status;
-        report.action_taken = action || null;
-        report.resolved_by = adminId;
-        await report.save();
+    //     report.status = status;
+    //     report.action_taken = action || null;
+    //     report.resolved_by = adminId;
+    //     await report.save();
 
-        // If action taken on the review
-        if (action && report.review_id) {
-            await this.moderateReview(report.review_id, { action, reason: report.description || 'Reported' }, adminId);
-        }
+    //     // If action taken on the review
+    //     if (action && report.review_id) {
+    //         await this.moderateReview(report.review_id, { action, reason: report.description || 'Reported' }, adminId);
+    //     }
 
-        return report;
-    }
+    //     return report;
+    // }
 
-    // Get Analytics (Rating distribution, trend)
-    async getReviewAnalytics() {
-        const ratingDist = await Review.aggregate([
-            { $match: { deleted_at: null } },
-            { $group: { _id: '$rating', count: { $sum: 1 } } }
-        ]);
+    // // Get Analytics (Rating distribution, trend)
+    // async getReviewAnalytics() {
+    //     const ratingDist = await Review.aggregate([
+    //         { $match: { deleted_at: null } },
+    //         { $group: { _id: '$rating', count: { $sum: 1 } } }
+    //     ]);
 
-        const statusDist = await Review.aggregate([
-            { $match: { deleted_at: null } },
-            { $group: { _id: '$status', count: { $sum: 1 } } }
-        ]);
+    //     const statusDist = await Review.aggregate([
+    //         { $match: { deleted_at: null } },
+    //         { $group: { _id: '$status', count: { $sum: 1 } } }
+    //     ]);
 
-        return { rating_distribution: ratingDist, status_distribution: statusDist };
-    }
+    //     return { rating_distribution: ratingDist, status_distribution: statusDist };
+    // }
 
 
     // ==================== PAYMENT MANAGEMENT ====================

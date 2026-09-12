@@ -1,11 +1,23 @@
+
+
 // Seller schema - Manages seller registration, business details, documents
 // Stores verification status and account information
 // Related to: user.model.js, product.model.js, order.model.js
 
 const mongoose = require("mongoose");
+const Counter = require("./counter.model");
 
 const seller_schema = new mongoose.Schema(
 {
+    // ============ CUSTOM SELLER CODE (For URL) ============
+    seller_code: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true,
+        trim: true
+    },
+
     // ============ RELATIONSHIPS ============
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -18,7 +30,6 @@ const seller_schema = new mongoose.Schema(
         ref: "User",
         default: null
     },
-    // ======================================
 
     // ============ BUSINESS DETAILS ============
     business_name: {
@@ -169,8 +180,8 @@ const seller_schema = new mongoose.Schema(
     // ============ ACCOUNT STATUS ============
     account_status: {
         type: String,
-        enum: ["active", "blocked", "inactive", "suspended"],
-        default: "inactive"
+        enum: ["pending", "approved", "rejected", "active", "inactive", "suspended"],
+        default: "pending"
     }
 },
 {
@@ -180,6 +191,46 @@ const seller_schema = new mongoose.Schema(
     }
 }
 );
+
+// ============ PRE-SAVE HOOK: Auto-generate seller_code ============
+seller_schema.pre('save', async function () {
+    // Only generate if new and not already set
+    if (!this.isNew || this.seller_code) return;
+
+    // Build base from business_name
+    let base = this.business_name || 'seller';
+
+    base = base.toString()
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]/g, '');
+
+    if (!base) base = 'seller';
+    if (base.length > 15) base = base.substring(0, 15);
+
+    // Use the same Counter model, different _id ('seller_code')
+    const counter = await Counter.findOneAndUpdate(
+        { _id: 'seller_code' },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+
+    const seqNumber = String(counter.seq).padStart(2, '0');
+    let code = `SLR-${base}${seqNumber}`;
+
+    // Ensure uniqueness
+    let suffix = 1;
+    while (await mongoose.model('Seller').exists({ seller_code: code, _id: { $ne: this._id } })) {
+        code = `SLR-${base}${seqNumber}-${suffix}`;
+        suffix += 1;
+        if (suffix > 999) {
+            code = `SLR-${base}-${Date.now()}`;
+            break;
+        }
+    }
+
+    this.seller_code = code;
+});
 
 // ============ INDEXES ============
 seller_schema.index({ business_name: 1 });

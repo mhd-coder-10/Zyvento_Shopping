@@ -307,21 +307,51 @@ const UserManagement = () => {
             <div className="bg-white/90 backdrop-blur-sm border-b border-sky-100 sticky top-0 z-20">
                 <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => navigate('/admin/users')} className="p-2.5 bg-sky-50 text-slate-700 border border-sky-200 rounded-xl hover:bg-sky-100 shrink-0">
+                        <button
+                            onClick={() => navigate('/admin/users')}
+                            className="p-2.5 bg-sky-50 border border-sky-200 rounded-xl hover:bg-sky-100 shrink-0"
+                            style={{ color: '#0f172a' }}
+                        >
                             <FiArrowLeft size={20} />
                         </button>
                         <div className="min-w-0">
-                            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">
+                            <h1
+                                className="truncate"
+                                style={{
+                                    color: '#0f172a',
+                                    WebkitTextFillColor: '#0f172a',
+                                    fontWeight: 900,
+                                    fontSize: '1.75rem',
+                                    lineHeight: '2.25rem',
+                                    letterSpacing: '-0.02em',
+                                    opacity: 1,
+                                    filter: 'none',
+                                    mixBlendMode: 'normal',
+                                }}
+                            >
                                 {isEditMode ? 'Edit User' : 'Create User'}
                             </h1>
-                            <p className="text-slate-600 text-xs sm:text-sm truncate">
+                            <p
+                                className="truncate mt-0.5"
+                                style={{
+                                    color: '#475569',
+                                    WebkitTextFillColor: '#475569',
+                                    opacity: 1,
+                                    filter: 'none',
+                                }}
+                            >
                                 {isEditMode ? 'Update user profile, role and access' : 'Add a new user to the platform'}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {isEditMode && (
-                            <button type="button" onClick={fetchUserData} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-sky-200 text-slate-700 rounded-xl hover:bg-sky-50 text-sm">
+                            <button
+                                type="button"
+                                onClick={fetchUserData}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-sky-200 rounded-xl hover:bg-sky-50 text-sm"
+                                style={{ color: '#334155' }}
+                            >
                                 <FiRefreshCw size={16} /> Reload
                             </button>
                         )}

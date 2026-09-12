@@ -939,18 +939,7 @@ const adminController = {
     }),
 
 
-
-
-    // ============ SELLER MANAGEMENT ============
-
-    // Export Sellers to CSV
-    exportSellers: asyncHandler(async (req, res) => {
-        const { search, status } = req.query;
-        const csv = await adminService.exportSellers({ search, status });
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="sellers.csv"');
-        res.status(200).send(csv);
-    }),
+    // ============ SELLER MANAGEMENT CONTROLLER ============
 
     // Get Seller Stats
     getSellerStats: asyncHandler(async (req, res) => {
@@ -960,100 +949,215 @@ const adminController = {
 
     // Get All Sellers
     getAllSellers: asyncHandler(async (req, res) => {
-        const { page, limit, search, status } = req.query;
-        const result = await adminService.getAllSellers({ page, limit, search, status });
-        res.status(200).json(ApiResponse.paginated(result.sellers, result.pagination, 'Sellers fetched'));
+        const {
+            page,
+            limit,
+            search,
+            account_status,
+            verification_status,
+            business_type,
+            sort_by,
+            sort_order,
+        } = req.query;
+
+        const result = await adminService.getAllSellers({
+            page,
+            limit,
+            search: search || null,
+            accountStatus: account_status || null,
+            verificationStatus: verification_status || null,
+            businessType: business_type || null,
+            sortBy: sort_by || 'created_at',
+            sortOrder: sort_order || 'desc',
+        });
+
+        res.status(200).json(
+            ApiResponse.paginated(result.sellers, result.pagination, 'Sellers fetched')
+        );
     }),
 
-    // Get Seller Details
+    // Get Seller Details (accepts both _id and seller_code)
     getSellerDetails: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const seller = await adminService.getSellerById(sellerId);
-        res.status(200).json(ApiResponse.success(seller, 'Seller details fetched'));
+        const { sellerCode } = req.params;
+        const data = await adminService.getSellerById(sellerCode);
+        res.status(200).json(ApiResponse.success(data, 'Seller details fetched'));
     }),
 
-    // Update Seller Details (Business Info)
+    // Update Seller Details (accepts both _id and seller_code)
     updateSellerDetails: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const updateData = req.body;
-        const seller = await adminService.updateSellerDetails(sellerId, updateData);
+        const { sellerCode } = req.params;
+        const seller = await adminService.updateSellerDetails(sellerCode, req.body);
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'update',
+            module: 'seller',
+            moduleId: seller._id,
+            description: `Seller ${seller.business_name} details updated`,
+            newData: req.body,
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success',
+        });
+
         res.status(200).json(ApiResponse.success(seller, 'Seller details updated'));
     }),
 
-    // Reset to Pending (Dedicated)
-    resetToPending: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const seller = await adminService.resetToPending(sellerId);
-        res.status(200).json(ApiResponse.success(seller, 'Seller set to pending'));
+    // Update Seller Status (accepts both _id and seller_code)
+    updateSellerStatus: asyncHandler(async (req, res) => {
+        const { sellerCode } = req.params;
+        const { status, reason, notes } = req.body;
+
+        const seller = await adminService.updateSellerStatus(
+            sellerCode,
+            status,
+            reason,
+            notes,
+            req.userId
+        );
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'status_change',
+            module: 'seller',
+            moduleId: seller._id,
+            description: `Seller ${seller.business_name} status changed to ${status}`,
+            newData: { status, reason },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success',
+        });
+
+        res.status(200).json(
+            ApiResponse.success(seller, `Seller status updated to ${status}`)
+        );
     }),
 
-    // Deactivate Seller (Inactive - Dedicated)
-    deactivateSeller: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
+    // Delete Seller (Cascade - Removes all related data)
+    deleteSeller: asyncHandler(async (req, res) => {
+        const { sellerCode } = req.params;
 
-        // Debug log - Check if sellerId is coming correctly
-        console.log('Deactivating seller with ID:', sellerId);
-
-        const seller = await adminService.deactivateSeller(sellerId);
+        // Fetch seller first for audit log
+        const sellerData = await adminService.getSellerById(sellerCode);
+        const seller = sellerData?.seller;
 
         if (!seller) {
             throw ApiError.notFound('Seller not found');
         }
 
-        // Debug log - Check what status is set
-        console.log('Seller status after update:', seller.account_status);
+        // Perform cascade delete
+        const result = await adminService.deleteSeller(sellerCode);
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'delete',
+            module: 'seller',
+            moduleId: seller._id,
+            description: `Seller ${seller.business_name} permanently deleted with all related data`,
+            oldData: {
+                business_name: seller.business_name,
+                email: seller.email,
+                seller_code: seller.seller_code,
+            },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success',
+        });
 
         res.status(200).json(
-            ApiResponse.success(seller, 'Seller set to inactive successfully')
+            ApiResponse.success(result, 'Seller and all related data permanently deleted')
         );
     }),
 
-    // Approve Seller
-    approveSeller: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const { notes } = req.body || {};
-        const seller = await adminService.approveSeller(sellerId, req.userId, notes);
-        res.status(200).json(ApiResponse.success(seller, 'Seller approved'));
+    // Export Sellers to CSV
+    exportSellers: asyncHandler(async (req, res) => {
+        const { search, status } = req.query;
+        const csv = await adminService.exportSellers({ search, status });
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="sellers.csv"');
+        res.status(200).send(csv);
     }),
 
-    // Reject Seller
-    rejectSeller: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const { rejection_reason } = req.body || {};
-        const seller = await adminService.rejectSeller(sellerId, rejection_reason);
-        res.status(200).json(ApiResponse.success(seller, 'Seller rejected'));
+    
+
+    // ============ REVIEW MANAGEMENT CONTROLLER ============
+
+    // Get All Reviews
+    getAllReviews: asyncHandler(async (req, res) => {
+        const {
+            page,
+            limit,
+            search,
+            status,
+            rating,
+            seller_id,
+            product_id,
+            report_count_min,
+            sort_by,
+            sort_order,
+        } = req.query;
+
+        const result = await adminService.getAllReviews({
+            page,
+            limit,
+            search: search || null,
+            status: status || null,
+            rating: rating || null,
+            sellerId: seller_id || null,
+            productId: product_id || null,
+            reportCountMin: report_count_min ? parseInt(report_count_min) : null,
+            sortBy: sort_by || 'created_at',
+            sortOrder: sort_order || 'desc',
+        });
+
+        res.status(200).json(
+            ApiResponse.paginated(result.reviews, result.pagination, 'Reviews fetched')
+        );
     }),
 
-    // Suspend Seller
-    suspendSeller: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const { reason } = req.body || {};
-        const seller = await adminService.suspendSeller(sellerId, reason);
-        res.status(200).json(ApiResponse.success(seller, 'Seller suspended'));
+    // Get Review Stats
+    getReviewStats: asyncHandler(async (req, res) => {
+        const stats = await adminService.getReviewStats();
+        res.status(200).json(ApiResponse.success(stats, 'Review stats fetched'));
     }),
 
-    // Activate Seller
-    activateSeller: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const seller = await adminService.activateSeller(sellerId);
-        res.status(200).json(ApiResponse.success(seller, 'Seller activated'));
+    // Get Review By ID
+    getReviewById: asyncHandler(async (req, res) => {
+        const { reviewId } = req.params;
+        const review = await adminService.getReviewById(reviewId);
+        res.status(200).json(ApiResponse.success(review, 'Review fetched'));
     }),
 
-    // Get Seller Transactions
-    getSellerTransactions: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const { page, limit } = req.query;
-        const result = await adminService.getSellerTransactions(sellerId, { page, limit });
-        res.status(200).json(ApiResponse.paginated(result.transactions, result.pagination, 'Transactions fetched'));
+    // Moderate Review
+    moderateReview: asyncHandler(async (req, res) => {
+        const { reviewId } = req.params;
+        const { action, reason, admin_comment } = req.body;
+
+        const review = await adminService.moderateReview(
+            reviewId,
+            action,
+            reason,
+            admin_comment,
+            req.userId
+        );
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'moderate',
+            module: 'review',
+            moduleId: review._id,
+            description: `Review ${review.review_code} ${action}ed by admin`,
+            newData: { action, reason },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success',
+        });
+
+        res.status(200).json(ApiResponse.success(review, `Review ${action}ed successfully`));
     }),
 
-    // Get Seller Performance
-    getSellerPerformance: asyncHandler(async (req, res) => {
-        const { sellerId } = req.params;
-        const { period = 'monthly' } = req.query;
-        const data = await adminService.getSellerPerformance(sellerId, period);
-        res.status(200).json(ApiResponse.success(data, 'Performance fetched'));
-    }),
+
+
 
     // ============ EMPLOYEE MANAGEMENT ============
 
@@ -1490,40 +1594,40 @@ const adminController = {
 
     // ============ REVIEW CONTROLLER ============
 
-    getReviewDashboard: asyncHandler(async (req, res) => {
-        const data = await adminService.getReviewDashboard();
-        res.status(200).json(ApiResponse.success(data, 'Review dashboard stats fetched'));
-    }),
+    // getReviewDashboard: asyncHandler(async (req, res) => {
+    //     const data = await adminService.getReviewDashboard();
+    //     res.status(200).json(ApiResponse.success(data, 'Review dashboard stats fetched'));
+    // }),
 
-    getAllReviews: asyncHandler(async (req, res) => {
-        const result = await adminService.getAllReviews(req.query);
-        res.status(200).json(ApiResponse.paginated(result.reviews, result.pagination, 'Reviews fetched successfully'));
-    }),
+    // getAllReviews: asyncHandler(async (req, res) => {
+    //     const result = await adminService.getAllReviews(req.query);
+    //     res.status(200).json(ApiResponse.paginated(result.reviews, result.pagination, 'Reviews fetched successfully'));
+    // }),
 
-    getReviewDetails: asyncHandler(async (req, res) => {
-        const review = await adminService.getReviewDetails(req.params.reviewCode);
-        res.status(200).json(ApiResponse.success(review, 'Review details fetched'));
-    }),
+    // getReviewDetails: asyncHandler(async (req, res) => {
+    //     const review = await adminService.getReviewDetails(req.params.reviewCode);
+    //     res.status(200).json(ApiResponse.success(review, 'Review details fetched'));
+    // }),
 
-    moderateReview: asyncHandler(async (req, res) => {
-        const review = await adminService.moderateReview(req.params.reviewCode, req.body, req.userId);
-        res.status(200).json(ApiResponse.success(review, 'Review moderated successfully'));
-    }),
+    // moderateReview: asyncHandler(async (req, res) => {
+    //     const review = await adminService.moderateReview(req.params.reviewCode, req.body, req.userId);
+    //     res.status(200).json(ApiResponse.success(review, 'Review moderated successfully'));
+    // }),
 
-    getAllReviewReports: asyncHandler(async (req, res) => {
-        const result = await adminService.getAllReviewReports(req.query);
-        res.status(200).json(ApiResponse.paginated(result.reports, result.pagination, 'Reports fetched successfully'));
-    }),
+    // getAllReviewReports: asyncHandler(async (req, res) => {
+    //     const result = await adminService.getAllReviewReports(req.query);
+    //     res.status(200).json(ApiResponse.paginated(result.reports, result.pagination, 'Reports fetched successfully'));
+    // }),
 
-    updateReviewReport: asyncHandler(async (req, res) => {
-        const report = await adminService.updateReviewReport(req.params.reportId, req.body, req.userId);
-        res.status(200).json(ApiResponse.success(report, 'Report updated successfully'));
-    }),
+    // updateReviewReport: asyncHandler(async (req, res) => {
+    //     const report = await adminService.updateReviewReport(req.params.reportId, req.body, req.userId);
+    //     res.status(200).json(ApiResponse.success(report, 'Report updated successfully'));
+    // }),
 
-    getReviewAnalytics: asyncHandler(async (req, res) => {
-        const data = await adminService.getReviewAnalytics();
-        res.status(200).json(ApiResponse.success(data, 'Review analytics fetched'));
-    }),
+    // getReviewAnalytics: asyncHandler(async (req, res) => {
+    //     const data = await adminService.getReviewAnalytics();
+    //     res.status(200).json(ApiResponse.success(data, 'Review analytics fetched'));
+    // }),
 
     // ============ PAYMENT CONTROLLER ============
 

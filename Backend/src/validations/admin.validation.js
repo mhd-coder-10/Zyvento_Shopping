@@ -478,6 +478,125 @@ const adminValidation = {
         reason: Joi.string().optional().allow(''),
     }),
 
+    // ============ SELLER MANAGEMENT (ADMIN SIDE) ============
+
+    // Get Sellers (List with Filters)
+    adminGetSellers: Joi.object({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(10),
+        search: Joi.string().optional().allow(''),
+        account_status: Joi.string()
+            .valid('all', 'pending', 'approved', 'active', 'inactive', 'suspended', 'rejected')
+            .optional(),
+        verification_status: Joi.string()
+            .valid('all', 'pending', 'under_review', 'approved', 'rejected', 'suspended')
+            .optional(),
+        business_type: Joi.string()
+            .valid('all', 'individual', 'company', 'brand', 'partnership')
+            .optional(),
+        sort_by: Joi.string()
+            .valid('created_at', 'business_name', 'total_orders', 'total_revenue', 'rating')
+            .default('created_at'),
+        sort_order: Joi.string().valid('asc', 'desc').default('desc'),
+    }),
+
+    // Seller Code/ID Param (URL param validation)
+    adminSellerIdParam: Joi.object({
+        sellerCode: Joi.string()
+            .required()
+            .messages({
+                'string.empty': 'Seller identifier is required',
+            }),
+    }),
+
+    // Update Seller Details
+    adminUpdateSeller: Joi.object({
+        business_name: Joi.string().min(2).max(100).optional(),
+        owner_name: Joi.string().min(2).max(50).optional(),
+        email: Joi.string().email().optional(),
+        mobile_number: Joi.string().optional().allow(''),
+        business_type: Joi.string()
+            .valid('individual', 'company', 'brand', 'partnership')
+            .optional(),
+        gst_number: Joi.string().optional().allow(''),
+        pan_number: Joi.string().optional().allow(''),
+        business_address: Joi.object({
+            street: Joi.string().optional().allow(''),
+            city: Joi.string().optional().allow(''),
+            state: Joi.string().optional().allow(''),
+            country: Joi.string().optional().allow(''),
+            zip_code: Joi.string().optional().allow(''),
+        }).optional(),
+        commission_rate: Joi.number().min(0).max(100).optional(),
+        settings: Joi.object({
+            order_processing_time: Joi.number().integer().min(1).max(72).optional(),
+            return_policy: Joi.string().optional().allow(''),
+        }).optional(),
+    }),
+
+    // Update Seller Status (Single Route - Handles all transitions)
+    adminUpdateSellerStatus: Joi.object({
+        status: Joi.string()
+            .valid('pending', 'approved', 'rejected', 'active', 'inactive', 'suspended')
+            .required()
+            .messages({
+                'any.only': 'Invalid status value',
+                'string.empty': 'Status is required',
+            }),
+        reason: Joi.string().optional().allow(''),
+        notes: Joi.string().optional().allow(''),
+    }),
+
+
+    
+    // ============ REVIEW MANAGEMENT (ADMIN SIDE) ============
+
+    // Get Reviews (List with Filters)
+    adminGetReviews: Joi.object({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(10),
+        search: Joi.string().optional().allow(''),
+        status: Joi.string()
+            .valid('all', 'pending', 'published', 'flagged', 'reported', 'hidden', 'rejected')
+            .optional(),
+        rating: Joi.number().integer().min(1).max(5).optional(),
+        seller_id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
+        product_id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional(),
+        report_count_min: Joi.number().integer().min(0).optional(),
+        sort_by: Joi.string()
+            .valid('created_at', 'rating', 'helpful_count', 'report_count')
+            .default('created_at'),
+        sort_order: Joi.string().valid('asc', 'desc').default('desc'),
+    }),
+
+    // Review ID Param
+    adminReviewIdParam: Joi.object({
+        reviewId: Joi.string()
+            .pattern(/^[0-9a-fA-F]{24}$/)
+            .required(),
+    }),
+
+    // Moderate Review (Publish/Hide/Reject/Flag)
+    adminModerateReview: Joi.object({
+        action: Joi.string()
+            .valid('publish', 'hide', 'reject', 'flag', 'unflag')
+            .required(),
+        reason: Joi.string().optional().allow(''),
+        admin_comment: Joi.string().optional().allow(''),
+    }),
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     // ============ PRODUCT VALIDATION  ============
