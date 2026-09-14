@@ -1,13 +1,11 @@
 
-
-
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
     FiShield, FiSearch, FiRefreshCw, FiEye, FiEdit2, FiTrash2,
     FiChevronLeft, FiChevronRight, FiUserPlus, FiUsers, FiCheckCircle,
-    FiClock, FiXCircle, FiAlertCircle, FiFilter, FiRotateCcw, FiX
+    FiClock, FiXCircle, FiAlertCircle, FiFilter, FiRotateCcw, FiX, FiDownload
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiService from '../../../api/ApiService';
@@ -189,6 +187,55 @@ const SubAdminList = () => {
         (statusFilter !== 'all' && !isDeletedTab ? 1 : 0) +
         (searchQuery ? 1 : 0);
 
+    const handleExport = () => {
+        if (!subAdmins.length) {
+            toast.warning('No data to export');
+            return;
+        }
+
+        const headers = [
+            'Sub-Admin Code',
+            'Full Name',
+            'Email',
+            'Mobile',
+            'Type',
+            'Department',
+            'Designation',
+            'Status',
+            'Joined'
+        ];
+
+        const rows = subAdmins.map((sa) => [
+            sa.sub_admin_code || '',
+            sa.full_name || '',
+            sa.email || '',
+            sa.mobile_number || '',
+            SUB_ADMIN_TYPE_LABELS[sa.sub_admin_type] || sa.sub_admin_type || '',
+            sa.department || '',
+            sa.designation || '',
+            isDeletedTab ? 'Deleted' : (sa.status || ''),
+            sa.created_at ? new Date(sa.created_at).toLocaleDateString('en-IN') : ''
+        ]);
+
+        const csv = [
+            headers.join(','),
+            ...rows.map((r) =>
+                r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
+            )
+        ].join('\n');
+
+        const url = window.URL.createObjectURL(
+            new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        );
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sub-admins-${isDeletedTab ? 'deleted-' : ''}${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+        toast.success('Sub-Admins exported successfully');
+    };
+
     // ================= RENDER =================
     return (
         <div className="min-h-screen min-w-0 overflow-x-hidden bg-slate-50">
@@ -205,6 +252,15 @@ const SubAdminList = () => {
                             <FiRefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
                             Refresh
                         </button>
+
+                        <button
+                            onClick={handleExport}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 sm:px-4"
+                        >
+                            <FiDownload size={15} />
+                            Export
+                        </button>
+
                         {!isDeletedTab && (
                             <button
                                 onClick={() => navigate('/admin/sub-admins/create')}
@@ -407,9 +463,9 @@ const SubAdminList = () => {
                                             {(sa.full_name || 'S').charAt(0).toUpperCase()}
                                         </div>
                                         <div className="flex-1 min-w-0 pl-2 text-start">
-                                            <p className="font-semibold text-slate-800 truncate">{sa.full_name}</p>
-                                            <p className="text-xs text-slate-500 truncate">{sa.email}</p>
-                                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{sa.sub_admin_code}</p>
+                                            <p className="font-semibold text-slate-800 truncate">{sa.full_name || 'Unknown' }</p>
+                                            <p className="text-xs text-slate-500 truncate">{sa.email || "No Email"}</p>
+                                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{sa.sub_admin_code || '—'}</p>
                                             <div className="flex flex-wrap items-center gap-1.5 mt-3">
                                                 <span className="inline-flex px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-semibold">
                                                     {SUB_ADMIN_TYPE_LABELS[sa.sub_admin_type]}
@@ -510,9 +566,9 @@ const SubAdminList = () => {
                                                         {(sa.full_name || 'S').charAt(0).toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0 text-start">
-                                                        <p className="font-medium text-slate-800 truncate">{sa.full_name}</p>
-                                                        <p className="text-xs text-slate-400 truncate">{sa.email}</p>
-                                                        <p className="text-xs text-slate-400 font-mono">{sa.sub_admin_code}</p>
+                                                        <p className="font-medium text-slate-800 truncate">{sa.full_name || 'Unknown'}</p>
+                                                        <p className="text-xs text-slate-400 truncate">{sa.email || 'No email'}</p>
+                                                        <p className="text-xs text-slate-400 font-mono">{sa.sub_admin_code || '—'}</p>
                                                     </div>
                                                 </div>
                                             </td>

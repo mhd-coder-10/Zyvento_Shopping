@@ -1862,52 +1862,6 @@ class AdminService {
     }
 
     // Update Sub-Admin profile
-    // async updateSubAdmin(subAdminCode, data, updatedByUserId) {
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: { $ne: true }
-    //     });
-    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
-
-    //     const allowed = ['sub_admin_type', 'department', 'designation', 'notes', 'mobile_number', 'full_name'];
-    //     allowed.forEach((key) => {
-    //         if (data[key] !== undefined) subAdmin[key] = data[key];
-    //     });
-
-    //     if (Array.isArray(data.current_role_ids)) {
-    //         const roleCount = await Role.countDocuments({ _id: { $in: data.current_role_ids } });
-    //         if (roleCount !== data.current_role_ids.length) {
-    //             throw ApiError.badRequest('One or more roles are invalid');
-    //         }
-    //         subAdmin.current_role_ids = data.current_role_ids;
-    //         subAdmin.role_history.push({
-    //             role_ids: data.current_role_ids,
-    //             assigned_by: updatedByUserId,
-    //             assigned_at: new Date(),
-    //             reason: data.role_change_reason || 'Roles updated'
-    //         });
-    //     }
-
-    //     await subAdmin.save();
-
-    //     // Sync denormalized fields back to User if changed
-    //     if (data.full_name || data.mobile_number) {
-    //         await User.updateOne(
-    //             { _id: subAdmin.user_id },
-    //             {
-    //                 $set: {
-    //                     ...(data.full_name && {
-    //                         first_name: data.full_name.split(' ')[0] || '',
-    //                         last_name: data.full_name.split(' ').slice(1).join(' ') || ''
-    //                     }),
-    //                     ...(data.mobile_number && { mobile_number: data.mobile_number })
-    //                 }
-    //             }
-    //         );
-    //     }
-
-    //     return { subAdmin };
-    // }
     // Update Sub-Admin profile
     async updateSubAdmin(subAdminCode, data, updatedByUserId) {
         const subAdmin = await SubAdmin.findOne({
@@ -1991,30 +1945,40 @@ class AdminService {
     //     }
 
     //     const previousStatus = subAdmin.status;
-    //     subAdmin.status = status;
 
-    //     if (status === 'suspended') {
-    //         subAdmin.suspended_by = changedByUserId;
-    //         subAdmin.suspended_reason = reason;
-    //         subAdmin.suspended_at = new Date();
-    //     } else if (previousStatus === 'suspended') {
-    //         subAdmin.suspended_by = null;
-    //         subAdmin.suspended_reason = null;
-    //         subAdmin.suspended_at = null;
-    //     }
-
-    //     subAdmin.status_history.push({
+    //     // Build update payload (only status-related fields)
+    //     const statusHistoryEntry = {
     //         from: previousStatus,
     //         to: status,
     //         changed_by: changedByUserId,
     //         reason: reason || '',
     //         notes: notes || '',
     //         changed_at: new Date()
-    //     });
+    //     };
 
-    //     await subAdmin.save();
+    //     const updatePayload = {
+    //         status,
+    //         $push: { status_history: statusHistoryEntry }
+    //     };
 
-    //     // Sync User account_status based on Sub-Admin status
+    //     if (status === 'suspended') {
+    //         updatePayload.suspended_by = changedByUserId;
+    //         updatePayload.suspended_reason = reason;
+    //         updatePayload.suspended_at = new Date();
+    //     } else if (previousStatus === 'suspended') {
+    //         updatePayload.suspended_by = null;
+    //         updatePayload.suspended_reason = null;
+    //         updatePayload.suspended_at = null;
+    //     }
+
+    //     // 👇 Use findOneAndUpdate to only touch status-related fields
+    //     const updated = await SubAdmin.findOneAndUpdate(
+    //         { _id: subAdmin._id },
+    //         updatePayload,
+    //         { new: true }
+    //     );
+
+    //     // Sync User account_status
     //     const userStatusMap = {
     //         active: 'active',
     //         inactive: 'inactive',
@@ -2026,7 +1990,7 @@ class AdminService {
     //         { $set: { account_status: userStatusMap[status] || 'pending' } }
     //     );
 
-    //     return { subAdmin };
+    //     return { subAdmin: updated };
     // }
 
     // Update Sub-Admin status (with User account_status sync)
@@ -2061,7 +2025,7 @@ class AdminService {
 
         const previousStatus = subAdmin.status;
 
-        // Build update payload (only status-related fields)
+        // Build update payload — only status-related fields
         const statusHistoryEntry = {
             from: previousStatus,
             to: status,
@@ -2086,7 +2050,7 @@ class AdminService {
             updatePayload.suspended_at = null;
         }
 
-        // 👇 Use findOneAndUpdate to only touch status-related fields
+        // Use findOneAndUpdate to ONLY touch status-related fields
         const updated = await SubAdmin.findOneAndUpdate(
             { _id: subAdmin._id },
             updatePayload,
