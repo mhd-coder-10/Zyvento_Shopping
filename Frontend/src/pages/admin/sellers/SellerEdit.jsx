@@ -23,7 +23,7 @@ import {
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import ApiService from '../../../api/ApiService';
-
+import AdminTopbar from '../../../components/admin/AdminTopbar';
 
 /* ================= STATUS CONFIG ================= */
 
@@ -36,7 +36,6 @@ const STATUS_LABELS = {
     suspended: 'Suspended',
 };
 
-// Allowed status transitions (must match backend logic)
 const ALLOWED_TRANSITIONS = {
     pending: ['approved', 'rejected'],
     approved: ['active'],
@@ -46,7 +45,6 @@ const ALLOWED_TRANSITIONS = {
     rejected: ['pending'],
 };
 
-// Which statuses require a reason/notes input
 const REASON_REQUIRED = {
     rejected: 'rejection_reason',
     suspended: 'suspension_reason',
@@ -142,6 +140,7 @@ const SellerEdit = () => {
     const [statusReason, setStatusReason] = useState('');
     const [statusNotes, setStatusNotes] = useState('');
     const [showStatusModal, setShowStatusModal] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     const [formData, setFormData] = useState({
         business_name: '',
@@ -169,13 +168,63 @@ const SellerEdit = () => {
 
     /* ================= FETCH SELLER ================= */
 
-    const fetchSeller = useCallback(async () => {
+    // const fetchSeller = useCallback(async () => {
+    //     if (!sellerCode) return;
+    //     setLoading(true);
+    //     setFetchError('');
+    //     try {
+    //         const res = await ApiService.getSellerByCode(sellerCode);
+    //         const data = res?.data?.data?.seller || res?.data?.seller || res?.data?.data || res?.data || {};
+
+    //         setCurrentStatus(data.account_status || 'pending');
+    //         setFormData({
+    //             business_name: data.business_name || '',
+    //             owner_name: data.owner_name || '',
+    //             email: data.email || '',
+    //             mobile_number: data.mobile_number || '',
+    //             business_type: data.business_type || 'individual',
+    //             gst_number: data.gst_number || '',
+    //             pan_number: data.pan_number || '',
+    //             business_address: {
+    //                 street: data.business_address?.street || '',
+    //                 city: data.business_address?.city || '',
+    //                 state: data.business_address?.state || '',
+    //                 country: data.business_address?.country || '',
+    //                 zip_code: data.business_address?.zip_code || '',
+    //             },
+    //             commission_rate: data.commission_rate ?? 10,
+    //             settings: {
+    //                 order_processing_time: data.settings?.order_processing_time || 24,
+    //                 return_policy: data.settings?.return_policy || '',
+    //             },
+    //         });
+    //     } catch (error) {
+    //         console.error('Error fetching seller:', error);
+    //         setFetchError(error?.response?.data?.message || error?.message || 'Failed to fetch seller');
+    //         toast.error('Failed to fetch seller');
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }, [sellerCode]);
+
+    const fetchSeller = useCallback(async ({ silent = false } = {}) => {
         if (!sellerCode) return;
-        setLoading(true);
+
+        if (silent) {
+            setRefreshing(true);
+        } else {
+            setLoading(true);
+        }
         setFetchError('');
+
         try {
             const res = await ApiService.getSellerByCode(sellerCode);
-            const data = res?.data?.data?.seller || res?.data?.seller || res?.data?.data || res?.data || {};
+            const data =
+                res?.data?.data?.seller ||
+                res?.data?.seller ||
+                res?.data?.data ||
+                res?.data ||
+                {};
 
             setCurrentStatus(data.account_status || 'pending');
             setFormData({
@@ -201,12 +250,16 @@ const SellerEdit = () => {
             });
         } catch (error) {
             console.error('Error fetching seller:', error);
-            setFetchError(error?.response?.data?.message || error?.message || 'Failed to fetch seller');
+            setFetchError(
+                error?.response?.data?.message || error?.message || 'Failed to fetch seller'
+            );
             toast.error('Failed to fetch seller');
         } finally {
-            setLoading(false);
+            if (silent) setRefreshing(false);
+            else setLoading(false);
         }
     }, [sellerCode]);
+
 
     useEffect(() => {
         fetchSeller();
@@ -239,7 +292,6 @@ const SellerEdit = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Basic validation
         const errs = {};
         if (!formData.business_name?.trim()) errs.business_name = 'Business name is required';
         if (!formData.owner_name?.trim()) errs.owner_name = 'Owner name is required';
@@ -279,7 +331,6 @@ const SellerEdit = () => {
     const handleStatusConfirm = async () => {
         if (!selectedStatus) return;
 
-        // Validate reason if required
         const needsReason = REASON_REQUIRED[selectedStatus];
         if (needsReason && !statusReason.trim()) {
             toast.error('Please provide a reason for this status change');
@@ -308,6 +359,16 @@ const SellerEdit = () => {
         }
     };
 
+    /* ================= NAVIGATION ================= */
+
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/admin/sellers');
+        }
+    };
+
     /* ================= RENDER ================= */
 
     if (loading) {
@@ -325,50 +386,27 @@ const SellerEdit = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-sky-50 via-[#eaf4ff] to-white pb-10">
+
             {/* HEADER */}
-            <div className="bg-white/90 backdrop-blur-sm border-b border-sky-100 sticky top-0 z-20">
-                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <button
-                            onClick={() => navigate(`/admin/sellers/${sellerCode}`)}
-                            className="p-2.5 bg-sky-50 text-slate-700 border border-sky-200 rounded-xl hover:bg-sky-100 shrink-0"
-                        >
-                            <FiArrowLeft size={20} />
-                        </button>
-                        <div className="min-w-0">
-                            <h1
-                                className="truncate"
-                                style={{
-                                    color: '#0f172a',
-                                    fontWeight: 900,
-                                    fontSize: '1.75rem',
-                                    lineHeight: '2.25rem',
-                                }}
-                            >
-                                Edit Seller
-                            </h1>
-                            <p className="text-sm text-slate-600 truncate">
-                                Update business information and manage status
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-5">
+                <AdminTopbar
+                    title="Edit Seller"
+                    subtitle={formData.business_name || 'Update business information and manage status'}
+                    actions={
                         <button
                             type="button"
-                            onClick={fetchSeller}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-sky-200 text-slate-700 rounded-xl hover:bg-sky-50 text-sm"
+                            onClick={() => fetchSeller({ silent: true })}
+                            disabled={refreshing}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-sky-300 hover:bg-sky-50 disabled:opacity-60 sm:px-4"
                         >
-                            <FiRefreshCw size={16} /> Reload
+                            <FiRefreshCw
+                                size={15}
+                                className={refreshing ? 'animate-spin' : ''}
+                            />
+                            {refreshing ? 'Refreshing...' : 'Reload'}
                         </button>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={saving}
-                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-sky-500 text-white rounded-xl hover:from-blue-700 hover:to-sky-600 shadow-lg shadow-blue-200 disabled:opacity-60 font-medium"
-                        >
-                            <FiSave size={18} /> {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
-                    </div>
-                </div>
+                    }
+                />
             </div>
 
             {fetchError && (
@@ -387,10 +425,10 @@ const SellerEdit = () => {
                 </div>
             )}
 
-            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 space-y-5">
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-5 space-y-5">
+
                 {/* STATUS MANAGEMENT */}
                 <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
-                    {/* Header */}
                     <div className="p-5 sm:p-6 border-b border-slate-100">
                         <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
@@ -405,9 +443,7 @@ const SellerEdit = () => {
                         </div>
                     </div>
 
-                    {/* Body */}
                     <div className="p-5 sm:p-6 space-y-5">
-                        {/* Current Status + Change Dropdown - Side by Side on Desktop */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
                             {/* Current Status Card */}
@@ -416,12 +452,18 @@ const SellerEdit = () => {
                                     <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                                         Current Status
                                     </p>
-                                    <div className={`p-2 rounded-lg ${currentStatus === 'active' ? 'bg-emerald-100' :
-                                        currentStatus === 'approved' ? 'bg-blue-100' :
-                                            currentStatus === 'pending' ? 'bg-amber-100' :
-                                                currentStatus === 'suspended' || currentStatus === 'rejected' ? 'bg-rose-100' :
-                                                    'bg-slate-100'
-                                        }`}>
+                                    <div
+                                        className={`p-2 rounded-lg ${currentStatus === 'active'
+                                            ? 'bg-emerald-100'
+                                            : currentStatus === 'approved'
+                                                ? 'bg-blue-100'
+                                                : currentStatus === 'pending'
+                                                    ? 'bg-amber-100'
+                                                    : currentStatus === 'suspended' || currentStatus === 'rejected'
+                                                        ? 'bg-rose-100'
+                                                        : 'bg-slate-100'
+                                            }`}
+                                    >
                                         {currentStatus === 'active' && <FiCheckCircle className="w-5 h-5 text-emerald-600" />}
                                         {currentStatus === 'approved' && <FiTrendingUp className="w-5 h-5 text-blue-600" />}
                                         {currentStatus === 'pending' && <FiClock className="w-5 h-5 text-amber-600" />}
@@ -442,7 +484,6 @@ const SellerEdit = () => {
                                     </span>
                                 </div>
 
-                                {/* Status Description */}
                                 <p className="text-xs text-slate-500 leading-relaxed">
                                     {currentStatus === 'active' && 'Seller is active and can sell on the platform.'}
                                     {currentStatus === 'approved' && 'Verified. Waiting for activation to start selling.'}
@@ -471,7 +512,6 @@ const SellerEdit = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {/* Dropdown */}
                                         <div className="relative">
                                             <select
                                                 value=""
@@ -490,7 +530,6 @@ const SellerEdit = () => {
                                             </div>
                                         </div>
 
-                                        {/* Allowed Transitions Pills */}
                                         <div>
                                             <p className="text-[11px] font-semibold text-slate-500 mb-2">
                                                 Allowed transitions:
@@ -522,7 +561,7 @@ const SellerEdit = () => {
                             </div>
                         </div>
 
-                        {/* Info Banners - Contextual */}
+                        {/* Info Banners */}
                         {currentStatus === 'approved' && (
                             <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                                 <div className="p-1.5 bg-blue-100 rounded-lg shrink-0">
@@ -754,7 +793,7 @@ const SellerEdit = () => {
                     <div className="flex flex-col sm:flex-row gap-3">
                         <button
                             type="button"
-                            onClick={() => navigate(`/admin/sellers/${sellerCode}`)}
+                            onClick={handleBack}
                             className="flex-1 px-4 py-3 border border-sky-200 text-slate-700 bg-white rounded-xl hover:bg-sky-50 font-medium"
                         >
                             Cancel

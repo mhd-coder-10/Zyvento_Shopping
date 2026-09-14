@@ -64,7 +64,6 @@ const AdminTopbar = ({ title, subtitle, actions }) => {
             navigate(-1); // Navigate back to the previous page
         }
         else {
-           // navigate('/admin/dashboard'); // Navigate to the dashboard if on a top-level page
             window.location.href = '/admin/dashboard';
         }
     };

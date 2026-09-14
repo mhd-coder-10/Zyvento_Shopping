@@ -502,8 +502,8 @@ const Sellers = () => {
                         <table className="w-full min-w-[1100px]">
                             <thead className="bg-sky-50/60">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Seller</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Seller</th>
+                                    <th className="px-4 py-3 text-cente text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Business Type</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Verification</th>
@@ -540,7 +540,7 @@ const Sellers = () => {
                                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-sky-500 text-white flex items-center justify-center text-xs font-bold">
                                                         {businessName(seller).charAt(0).toUpperCase()}
                                                     </div>
-                                                    <div className="min-w-0">
+                                                    <div className="min-w-0 text-start">
                                                         <p className="font-medium text-slate-800 truncate">{businessName(seller)}</p>
                                                         <p className="text-xs text-slate-400 truncate">{sellerCode(seller)}</p>
                                                     </div>

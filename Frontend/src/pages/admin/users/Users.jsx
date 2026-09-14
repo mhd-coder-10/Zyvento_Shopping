@@ -558,7 +558,7 @@ const Users = () => {
                         <table className="w-full min-w-[1000px]">
                             <thead className="bg-sky-50/60">
                                 <tr>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">User</th>
+                                    <th className="px-4 py-3 pl-20 text-start text-xs font-semibold text-slate-500 uppercase tracking-wide">User</th>
                                     <th className="px-4 py-3 pl-8 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact</th>
                                     <th className="px-4 py-3 pr-12 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</th>
                                     <th className="px-4 py-3 pr-8 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
@@ -587,7 +587,7 @@ const Users = () => {
                                                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 text-white flex items-center justify-center text-xs font-semibold">
                                                         {fullName(user).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
                                                     </div>
-                                                    <div className="min-w-0">
+                                                    <div className="min-w-0 text-start">
                                                         <p className="font-medium text-slate-800 truncate">{fullName(user)}</p>
                                                         <p className="text-xs text-slate-400 truncate">
                                                             @{user.username || emailOf(user).split('@')[0] || 'user'}
