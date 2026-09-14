@@ -6,350 +6,353 @@ const Joi = require('joi');
 
 const adminValidation = {
     // ============ CREATE SUB-ADMIN ============
-    createSubAdmin: Joi.object({
-        user_id: Joi.string()
-            .pattern(/^[0-9a-fA-F]{24}$/)
-            .required()
-            .messages({
-                'string.pattern.base': 'Invalid user ID',
-                'string.empty': 'User ID is required',
-            }),
+    // createSubAdmin: Joi.object({
+    //     user_id: Joi.string()
+    //         .pattern(/^[0-9a-fA-F]{24}$/)
+    //         .required()
+    //         .messages({
+    //             'string.pattern.base': 'Invalid user ID',
+    //             'string.empty': 'User ID is required',
+    //         }),
 
-        sub_admin_type: Joi.string()
-            .valid(
-                'sub_admin_manager',
-                'seller_manager',
-                'seller_opening_account_manager',
-                'finance_manager',
-                'support_manager',
-                'report_manager',
-                'product_category_manager',
-                'content_manager',
-                'marketing_manager',
-                'analytics_manager',
-                'compliance_manager',
-                'shipping_manager'
-            )
-            .required()
-            .messages({
-                'any.only': 'Invalid sub-admin type',
-                'string.empty': 'Sub-admin type is required',
-            }),
+    //     sub_admin_type: Joi.string()
+    //         .valid(
+    //             'sub_admin_manager',
+    //             'seller_manager',
+    //             'seller_opening_account_manager',
+    //             'finance_manager',
+    //             'support_manager',
+    //             'report_manager',
+    //             'product_category_manager',
+    //             'content_manager',
+    //             'marketing_manager',
+    //             'analytics_manager',
+    //             'compliance_manager',
+    //             'shipping_manager'
+    //         )
+    //         .required()
+    //         .messages({
+    //             'any.only': 'Invalid sub-admin type',
+    //             'string.empty': 'Sub-admin type is required',
+    //         }),
 
-        department: Joi.string()
-            .required()
-            .messages({
-                'string.empty': 'Department is required',
-            }),
+    //     department: Joi.string()
+    //         .required()
+    //         .messages({
+    //             'string.empty': 'Department is required',
+    //         }),
 
-        designation: Joi.string()
-            .optional(),
+    //     designation: Joi.string()
+    //         .optional(),
 
-        role_ids: Joi.array()
-            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-            .optional(),
+    //     role_ids: Joi.array()
+    //         .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+    //         .optional(),
 
-        status: Joi.string()
-            .valid('active', 'inactive', 'pending')
-            .default('pending'),
-    }),
+    //     status: Joi.string()
+    //         .valid('active', 'inactive', 'pending')
+    //         .default('pending'),
+    // }),
 
-    // ============ UPDATE SUB-ADMIN ============
-    updateSubAdmin: Joi.object({
-        sub_admin_type: Joi.string()
-            .valid(
-                'sub_admin_manager',
-                'seller_manager',
-                'seller_opening_account_manager',
-                'finance_manager',
-                'support_manager',
-                'report_manager',
-                'product_category_manager',
-                'content_manager',
-                'marketing_manager',
-                'analytics_manager',
-                'compliance_manager',
-                'shipping_manager'
-            )
-            .optional(),
+    // // ============ UPDATE SUB-ADMIN ============
+    // updateSubAdmin: Joi.object({
+    //     sub_admin_type: Joi.string()
+    //         .valid(
+    //             'sub_admin_manager',
+    //             'seller_manager',
+    //             'seller_opening_account_manager',
+    //             'finance_manager',
+    //             'support_manager',
+    //             'report_manager',
+    //             'product_category_manager',
+    //             'content_manager',
+    //             'marketing_manager',
+    //             'analytics_manager',
+    //             'compliance_manager',
+    //             'shipping_manager'
+    //         )
+    //         .optional(),
 
-        department: Joi.string()
-            .optional(),
+    //     department: Joi.string()
+    //         .optional(),
 
-        designation: Joi.string()
-            .optional(),
+    //     designation: Joi.string()
+    //         .optional(),
 
-        role_ids: Joi.array()
-            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-            .optional(),
+    //     role_ids: Joi.array()
+    //         .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+    //         .optional(),
 
-        status: Joi.string()
-            .valid('active', 'inactive', 'suspended', 'pending')
-            .optional(),
+    //     status: Joi.string()
+    //         .valid('active', 'inactive', 'suspended', 'pending')
+    //         .optional(),
 
-        notes: Joi.string()
-            .optional(),
+    //     notes: Joi.string()
+    //         .optional(),
 
-        suspended_reason: Joi.string()
-            .when('status', {
-                is: 'suspended',
-                then: Joi.required(),
-                otherwise: Joi.optional(),
-            }),
-    }),
+    //     suspended_reason: Joi.string()
+    //         .when('status', {
+    //             is: 'suspended',
+    //             then: Joi.required(),
+    //             otherwise: Joi.optional(),
+    //         }),
+    // }),
 
-    // ============ CREATE ROLE ============
-    createRole: Joi.object({
-        role_name: Joi.string()
-            .min(2)
-            .max(50)
-            .required()
-            .messages({
-                'string.empty': 'Role name is required',
-                'string.min': 'Role name must be at least 2 characters',
-            }),
+    // // ============ CREATE ROLE ============
+    // createRole: Joi.object({
+    //     role_name: Joi.string()
+    //         .min(2)
+    //         .max(50)
+    //         .required()
+    //         .messages({
+    //             'string.empty': 'Role name is required',
+    //             'string.min': 'Role name must be at least 2 characters',
+    //         }),
 
-        role_key: Joi.string()
-            .pattern(/^[A-Z_]+$/)
-            .required()
-            .messages({
-                'string.pattern.base': 'Role key must be uppercase with underscores (e.g., SELLER_MANAGER)',
-                'string.empty': 'Role key is required',
-            }),
+    //     role_key: Joi.string()
+    //         .pattern(/^[A-Z_]+$/)
+    //         .required()
+    //         .messages({
+    //             'string.pattern.base': 'Role key must be uppercase with underscores (e.g., SELLER_MANAGER)',
+    //             'string.empty': 'Role key is required',
+    //         }),
 
-        role_type: Joi.string()
-            .valid('system', 'admin', 'sub_admin', 'seller', 'employee', 'customer')
-            .required(),
+    //     role_type: Joi.string()
+    //         .valid('system', 'admin', 'sub_admin', 'seller', 'employee', 'customer')
+    //         .required(),
 
-        description: Joi.string()
-            .optional(),
+    //     description: Joi.string()
+    //         .optional(),
 
-        permission_ids: Joi.array()
-            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-            .optional(),
+    //     permission_ids: Joi.array()
+    //         .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+    //         .optional(),
 
-        module_access: Joi.array()
-            .items(
-                Joi.object({
-                    module: Joi.string().required(),
-                    permissions: Joi.object({
-                        create: Joi.boolean().default(false),
-                        read: Joi.boolean().default(false),
-                        update: Joi.boolean().default(false),
-                        delete: Joi.boolean().default(false),
-                        manage: Joi.boolean().default(false),
-                        approve: Joi.boolean().default(false),
-                        reject: Joi.boolean().default(false),
-                        export: Joi.boolean().default(false),
-                        import: Joi.boolean().default(false),
-                    }),
-                    fields: Joi.array().items(Joi.string()),
-                })
-            )
-            .optional(),
+    //     module_access: Joi.array()
+    //         .items(
+    //             Joi.object({
+    //                 module: Joi.string().required(),
+    //                 permissions: Joi.object({
+    //                     create: Joi.boolean().default(false),
+    //                     read: Joi.boolean().default(false),
+    //                     update: Joi.boolean().default(false),
+    //                     delete: Joi.boolean().default(false),
+    //                     manage: Joi.boolean().default(false),
+    //                     approve: Joi.boolean().default(false),
+    //                     reject: Joi.boolean().default(false),
+    //                     export: Joi.boolean().default(false),
+    //                     import: Joi.boolean().default(false),
+    //                 }),
+    //                 fields: Joi.array().items(Joi.string()),
+    //             })
+    //         )
+    //         .optional(),
 
-        data_scope: Joi.string()
-            .valid('all', 'own', 'department', 'seller_only', 'custom')
-            .default('own'),
+    //     data_scope: Joi.string()
+    //         .valid('all', 'own', 'department', 'seller_only', 'custom')
+    //         .default('own'),
 
-        is_system_role: Joi.boolean()
-            .default(false),
+    //     is_system_role: Joi.boolean()
+    //         .default(false),
 
-        is_active: Joi.boolean()
-            .default(true),
+    //     is_active: Joi.boolean()
+    //         .default(true),
 
-        priority: Joi.number()
-            .integer()
-            .min(0)
-            .default(0),
-    }),
+    //     priority: Joi.number()
+    //         .integer()
+    //         .min(0)
+    //         .default(0),
+    // }),
 
-    // ============ UPDATE ROLE ============
-    updateRole: Joi.object({
-        role_name: Joi.string()
-            .min(2)
-            .max(50)
-            .optional(),
+    // // ============ UPDATE ROLE ============
+    // updateRole: Joi.object({
+    //     role_name: Joi.string()
+    //         .min(2)
+    //         .max(50)
+    //         .optional(),
 
-        description: Joi.string()
-            .optional(),
+    //     description: Joi.string()
+    //         .optional(),
 
-        permission_ids: Joi.array()
-            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-            .optional(),
+    //     permission_ids: Joi.array()
+    //         .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+    //         .optional(),
 
-        module_access: Joi.array()
-            .items(
-                Joi.object({
-                    module: Joi.string().required(),
-                    permissions: Joi.object({
-                        create: Joi.boolean().default(false),
-                        read: Joi.boolean().default(false),
-                        update: Joi.boolean().default(false),
-                        delete: Joi.boolean().default(false),
-                        manage: Joi.boolean().default(false),
-                        approve: Joi.boolean().default(false),
-                        reject: Joi.boolean().default(false),
-                        export: Joi.boolean().default(false),
-                        import: Joi.boolean().default(false),
-                    }),
-                    fields: Joi.array().items(Joi.string()),
-                })
-            )
-            .optional(),
+    //     module_access: Joi.array()
+    //         .items(
+    //             Joi.object({
+    //                 module: Joi.string().required(),
+    //                 permissions: Joi.object({
+    //                     create: Joi.boolean().default(false),
+    //                     read: Joi.boolean().default(false),
+    //                     update: Joi.boolean().default(false),
+    //                     delete: Joi.boolean().default(false),
+    //                     manage: Joi.boolean().default(false),
+    //                     approve: Joi.boolean().default(false),
+    //                     reject: Joi.boolean().default(false),
+    //                     export: Joi.boolean().default(false),
+    //                     import: Joi.boolean().default(false),
+    //                 }),
+    //                 fields: Joi.array().items(Joi.string()),
+    //             })
+    //         )
+    //         .optional(),
 
-        data_scope: Joi.string()
-            .valid('all', 'own', 'department', 'seller_only', 'custom')
-            .optional(),
+    //     data_scope: Joi.string()
+    //         .valid('all', 'own', 'department', 'seller_only', 'custom')
+    //         .optional(),
 
-        is_active: Joi.boolean()
-            .optional(),
+    //     is_active: Joi.boolean()
+    //         .optional(),
 
-        priority: Joi.number()
-            .integer()
-            .min(0)
-            .optional(),
-    }),
+    //     priority: Joi.number()
+    //         .integer()
+    //         .min(0)
+    //         .optional(),
+    // }),
 
-    // ============ CREATE PERMISSION ============
-    createPermission: Joi.object({
-        permission_name: Joi.string()
-            .min(2)
-            .max(100)
-            .required()
-            .messages({
-                'string.empty': 'Permission name is required',
-            }),
+    // // ============ CREATE PERMISSION ============
+    // createPermission: Joi.object({
+    //     permission_name: Joi.string()
+    //         .min(2)
+    //         .max(100)
+    //         .required()
+    //         .messages({
+    //             'string.empty': 'Permission name is required',
+    //         }),
 
-        permission_key: Joi.string()
-            .pattern(/^[A-Z_]+$/)
-            .required()
-            .messages({
-                'string.pattern.base': 'Permission key must be uppercase with underscores',
-                'string.empty': 'Permission key is required',
-            }),
+    //     permission_key: Joi.string()
+    //         .pattern(/^[A-Z_]+$/)
+    //         .required()
+    //         .messages({
+    //             'string.pattern.base': 'Permission key must be uppercase with underscores',
+    //             'string.empty': 'Permission key is required',
+    //         }),
 
-        module_name: Joi.string()
-            .required()
-            .messages({
-                'string.empty': 'Module name is required',
-            }),
+    //     module_name: Joi.string()
+    //         .required()
+    //         .messages({
+    //             'string.empty': 'Module name is required',
+    //         }),
 
-        sub_module: Joi.string()
-            .optional(),
+    //     sub_module: Joi.string()
+    //         .optional(),
 
-        action: Joi.string()
-            .valid(
-                'create', 'read', 'update', 'delete', 'manage',
-                'approve', 'reject', 'export', 'import',
-                'view_all', 'view_own', 'assign', 'revoke'
-            )
-            .required()
-            .messages({
-                'any.only': 'Invalid action',
-                'string.empty': 'Action is required',
-            }),
+    //     action: Joi.string()
+    //         .valid(
+    //             'create', 'read', 'update', 'delete', 'manage',
+    //             'approve', 'reject', 'export', 'import',
+    //             'view_all', 'view_own', 'assign', 'revoke'
+    //         )
+    //         .required()
+    //         .messages({
+    //             'any.only': 'Invalid action',
+    //             'string.empty': 'Action is required',
+    //         }),
 
-        description: Joi.string()
-            .optional(),
+    //     description: Joi.string()
+    //         .optional(),
 
-        is_system: Joi.boolean()
-            .default(false),
+    //     is_system: Joi.boolean()
+    //         .default(false),
 
-        is_active: Joi.boolean()
-            .default(true),
+    //     is_active: Joi.boolean()
+    //         .default(true),
 
-        priority: Joi.number()
-            .integer()
-            .min(0)
-            .default(0),
-    }),
+    //     priority: Joi.number()
+    //         .integer()
+    //         .min(0)
+    //         .default(0),
+    // }),
 
-    // ============ UPDATE PERMISSION ============
-    updatePermission: Joi.object({
-        permission_name: Joi.string()
-            .min(2)
-            .max(100)
-            .optional(),
+    // // ============ UPDATE PERMISSION ============
+    // updatePermission: Joi.object({
+    //     permission_name: Joi.string()
+    //         .min(2)
+    //         .max(100)
+    //         .optional(),
 
-        description: Joi.string()
-            .optional(),
+    //     description: Joi.string()
+    //         .optional(),
 
-        is_active: Joi.boolean()
-            .optional(),
+    //     is_active: Joi.boolean()
+    //         .optional(),
 
-        priority: Joi.number()
-            .integer()
-            .min(0)
-            .optional(),
-    }),
+    //     priority: Joi.number()
+    //         .integer()
+    //         .min(0)
+    //         .optional(),
+    // }),
 
-    // ============ ASSIGN ROLE TO USER ============
-    assignRoleToUser: Joi.object({
-        user_id: Joi.string()
-            .pattern(/^[0-9a-fA-F]{24}$/)
-            .required()
-            .messages({
-                'string.pattern.base': 'Invalid user ID',
-                'string.empty': 'User ID is required',
-            }),
+    // // ============ ASSIGN ROLE TO USER ============
+    // assignRoleToUser: Joi.object({
+    //     user_id: Joi.string()
+    //         .pattern(/^[0-9a-fA-F]{24}$/)
+    //         .required()
+    //         .messages({
+    //             'string.pattern.base': 'Invalid user ID',
+    //             'string.empty': 'User ID is required',
+    //         }),
 
-        role_ids: Joi.array()
-            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-            .min(1)
-            .required()
-            .messages({
-                'array.min': 'At least one role is required',
-            }),
+    //     role_ids: Joi.array()
+    //         .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+    //         .min(1)
+    //         .required()
+    //         .messages({
+    //             'array.min': 'At least one role is required',
+    //         }),
 
-        reason: Joi.string()
-            .optional(),
-    }),
+    //     reason: Joi.string()
+    //         .optional(),
+    // }),
 
-    // ============ REVOKE ROLE FROM USER ============
-    revokeRoleFromUser: Joi.object({
-        user_id: Joi.string()
-            .pattern(/^[0-9a-fA-F]{24}$/)
-            .required()
-            .messages({
-                'string.pattern.base': 'Invalid user ID',
-                'string.empty': 'User ID is required',
-            }),
+    // // ============ REVOKE ROLE FROM USER ============
+    // revokeRoleFromUser: Joi.object({
+    //     user_id: Joi.string()
+    //         .pattern(/^[0-9a-fA-F]{24}$/)
+    //         .required()
+    //         .messages({
+    //             'string.pattern.base': 'Invalid user ID',
+    //             'string.empty': 'User ID is required',
+    //         }),
 
-        role_ids: Joi.array()
-            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-            .min(1)
-            .required()
-            .messages({
-                'array.min': 'At least one role is required',
-            }),
+    //     role_ids: Joi.array()
+    //         .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+    //         .min(1)
+    //         .required()
+    //         .messages({
+    //             'array.min': 'At least one role is required',
+    //         }),
 
-        reason: Joi.string()
-            .optional(),
-    }),
+    //     reason: Joi.string()
+    //         .optional(),
+    // }),
 
-    // ============ BULK ASSIGN ROLES ============
-    bulkAssignRoles: Joi.object({
-        assignments: Joi.array()
-            .items(
-                Joi.object({
-                    user_id: Joi.string()
-                        .pattern(/^[0-9a-fA-F]{24}$/)
-                        .required(),
-                    role_ids: Joi.array()
-                        .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-                        .min(1)
-                        .required(),
-                })
-            )
-            .min(1)
-            .required(),
+    // // ============ BULK ASSIGN ROLES ============
+    // bulkAssignRoles: Joi.object({
+    //     assignments: Joi.array()
+    //         .items(
+    //             Joi.object({
+    //                 user_id: Joi.string()
+    //                     .pattern(/^[0-9a-fA-F]{24}$/)
+    //                     .required(),
+    //                 role_ids: Joi.array()
+    //                     .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+    //                     .min(1)
+    //                     .required(),
+    //             })
+    //         )
+    //         .min(1)
+    //         .required(),
 
-        reason: Joi.string()
-            .optional(),
-    }),
+    //     reason: Joi.string()
+    //         .optional(),
+    // }),
 
-    // ============ USERS VALIDATION ==============
+
+
+
+    // ============ USERS MANAGEMENT VALIDATION ==============
     // GET USERS (With Filters) 
     getUsers: Joi.object({
         page: Joi.number().integer().min(1).default(1),
@@ -478,7 +481,7 @@ const adminValidation = {
         reason: Joi.string().optional().allow(''),
     }),
 
-    // ============ SELLER MANAGEMENT (ADMIN SIDE) ============
+    // ============ SELLER MANAGEMENT VALIDATION (ADMIN SIDE) ============
 
     // Get Sellers (List with Filters)
     adminGetSellers: Joi.object({
@@ -548,7 +551,124 @@ const adminValidation = {
     }),
 
 
-    
+    // ============ SUB-ADMIN MANAGEMENT VALIDATION ==============
+
+    // URL Param
+    subAdminCodeParam: Joi.object({
+        subAdminCode: Joi.string()
+            .pattern(/^SUBA-[A-Z0-9]+$/)
+            .required()
+            .messages({
+                'string.pattern.base': 'Invalid Sub-Admin code format'
+            })
+    }),
+
+    // GET ALL SUB-ADMINS (With Filters)
+    getAllSubAdmins: Joi.object({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(10),
+        search: Joi.string().optional().allow(''),
+        sub_admin_type: Joi.string()
+            .valid('all', 'manager', 'finance_manager', 'support_manager', 'seller_manager')
+            .optional(),
+        status: Joi.string()
+            .valid('all', 'pending', 'active', 'inactive', 'suspended')
+            .optional(),
+        department: Joi.string().optional().allow('', 'all'),
+        sort_by: Joi.string()
+            .valid('created_at', 'updated_at', 'full_name', 'email', 'department')
+            .default('created_at'),
+        sort_order: Joi.string().valid('asc', 'desc').default('desc'),
+        start_date: Joi.date().optional(),
+        end_date: Joi.date().optional()
+    }),
+
+    // CREATE SUB-ADMIN
+    createSubAdmin: Joi.object({
+        user_id: Joi.string()
+            .pattern(/^[0-9a-fA-F]{24}$/)
+            .required()
+            .messages({
+                'string.pattern.base': 'Invalid user ID'
+            }),
+        sub_admin_type: Joi.string()
+            .valid('manager', 'finance_manager', 'support_manager', 'seller_manager')
+            .required(),
+        department: Joi.string().trim().min(2).max(100).required(),
+        designation: Joi.string().trim().max(100).optional().allow('', null),
+        current_role_ids: Joi.array()
+            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+            .optional()
+            .default([]),
+        notes: Joi.string().trim().max(1000).optional().allow('', null)
+    }),
+
+    // UPDATE SUB-ADMIN
+    updateSubAdmin: Joi.object({
+        full_name: Joi.string().trim().min(2).max(100).optional(),
+        mobile_number: Joi.string()
+            .pattern(/^[0-9]{10,15}$/)
+            .optional()
+            .allow('', null)
+            .messages({
+                'string.pattern.base': 'Mobile number must be 10-15 digits'
+            }),
+        sub_admin_type: Joi.string()
+            .valid('manager', 'finance_manager', 'support_manager', 'seller_manager')
+            .optional(),
+        department: Joi.string().trim().min(2).max(100).optional(),
+        designation: Joi.string().trim().max(100).optional().allow('', null),
+        current_role_ids: Joi.array()
+            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+            .optional(),
+        role_change_reason: Joi.string().trim().max(500).optional().allow('', null),
+        notes: Joi.string().trim().max(1000).optional().allow('', null)
+    }).min(1),
+
+    // UPDATE SUB-ADMIN STATUS
+    updateSubAdminStatus: Joi.object({
+        status: Joi.string()
+            .valid('active', 'inactive', 'suspended')
+            .required(),
+        reason: Joi.string().trim().max(500).optional().allow('', null),
+        notes: Joi.string().trim().max(1000).optional().allow('', null)
+    }),
+
+    // GET DELETED SUB-ADMINS
+    getDeletedSubAdmins: Joi.object({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(10),
+        search: Joi.string().optional().allow(''),
+        sub_admin_type: Joi.string()
+            .valid('all', 'manager', 'finance_manager', 'support_manager', 'seller_manager')
+            .optional(),
+        sort_by: Joi.string()
+            .valid('deleted_at', 'created_at', 'full_name', 'email')
+            .default('deleted_at'),
+        sort_order: Joi.string().valid('asc', 'desc').default('desc')
+    }),
+
+    // Also UPDATE existing getAllSubAdmins — add `view` field
+    getAllSubAdmins: Joi.object({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(10),
+        search: Joi.string().optional().allow(''),
+        sub_admin_type: Joi.string()
+            .valid('all', 'manager', 'finance_manager', 'support_manager', 'seller_manager')
+            .optional(),
+        status: Joi.string()
+            .valid('all', 'pending', 'active', 'inactive', 'suspended')
+            .optional(),
+        department: Joi.string().optional().allow('', 'all'),
+        view: Joi.string().valid('active', 'deleted').default('active'),   // 👈 NEW
+        sort_by: Joi.string()
+            .valid('created_at', 'updated_at', 'full_name', 'email', 'department')
+            .default('created_at'),
+        sort_order: Joi.string().valid('asc', 'desc').default('desc'),
+        start_date: Joi.date().optional(),
+        end_date: Joi.date().optional()
+    }),
+
     // ============ REVIEW MANAGEMENT (ADMIN SIDE) ============
 
     // Get Reviews (List with Filters)

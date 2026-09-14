@@ -157,8 +157,46 @@ const checkEmployeeAccess = (paramName = 'employeeId') => {
  * Sub-Admin Access Check Middleware
  * Ensures sub-admin can only access their department data
  */
+// const checkSubAdminAccess = () => {
+//     return (req, res, next) => {
+//         try {
+//             if (!req.user) {
+//                 return next(ApiError.unauthorized('Authentication required'));
+//             }
+
+//             // Super admin can access all
+//             if (req.userType === 'super_admin') {
+//                 return next();
+//             }
+
+//             // Sub-admin can access their department
+//             if (req.userType === 'sub_admin') {
+//                 // Add department based access logic here
+//                 return next();
+//             }
+
+//             return next(ApiError.forbidden('Insufficient permissions'));
+//         } catch (error) {
+//             next(error);
+//         }
+//     };
+// };
+
+
+// ============================================================
+// CHECK SUB-ADMIN ACCESS
+// ============================================================
+// Rules:
+//   1. Super admin → hamesha allow
+//   2. Sub-admin → check karo:
+//        - SubAdmin profile exist kare
+//        - is_deleted === false
+//        - status === 'active'
+//      Warna block with proper reason
+// ============================================================
+
 const checkSubAdminAccess = () => {
-    return (req, res, next) => {
+    return async (req, res, next) => {
         try {
             if (!req.user) {
                 return next(ApiError.unauthorized('Authentication required'));
@@ -169,9 +207,36 @@ const checkSubAdminAccess = () => {
                 return next();
             }
 
-            // Sub-admin can access their department
+            // Sub-admin — full check
             if (req.userType === 'sub_admin') {
-                // Add department based access logic here
+                const subAdmin = await SubAdmin.findOne({
+                    user_id: req.user._id,
+                    is_deleted: { $ne: true }
+                })
+                    .select('status is_deleted sub_admin_type department')
+                    .lean();
+
+                // Profile missing (ya deleted)
+                if (!subAdmin) {
+                    return next(ApiError.forbidden(
+                        'Your Sub-Admin account has been deleted. Please contact administrator.'
+                    ));
+                }
+
+                // Status check — sirf active allowed
+                if (subAdmin.status !== 'active') {
+                    const reasons = {
+                        pending: 'Your Sub-Admin account is pending approval.',
+                        inactive: 'Your Sub-Admin account is inactive. Please contact administrator.',
+                        suspended: 'Your Sub-Admin account has been suspended. Please contact administrator.'
+                    };
+                    return next(ApiError.forbidden(
+                        reasons[subAdmin.status] || 'Sub-Admin account is not active.'
+                    ));
+                }
+
+                // Attach for downstream use
+                req.subAdmin = subAdmin;
                 return next();
             }
 

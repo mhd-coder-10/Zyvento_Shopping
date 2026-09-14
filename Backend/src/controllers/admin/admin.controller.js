@@ -1078,8 +1078,176 @@ const adminController = {
         res.status(200).send(csv);
     }),
 
-    
 
+    // =================== SUB-ADMIN mANAGEMENT CONTROLLERS ======================
+
+    // Get All Sub-Admins
+    getAllSubAdmins: asyncHandler(async (req, res) => {
+        const result = await adminService.getAllSubAdmins(req.query);
+        res.status(200).json(
+            ApiResponse.success(result, 'Sub-Admins fetched successfully')
+        );
+    }),
+
+    // Get Sub-Admin Stats
+    getSubAdminStats: asyncHandler(async (req, res) => {
+        const result = await adminService.getSubAdminStats();
+        res.status(200).json(
+            ApiResponse.success(result, 'Sub-Admin stats fetched successfully')
+        );
+    }),
+
+    // Get Sub-Admin By Code
+    getSubAdminByCode: asyncHandler(async (req, res) => {
+        const { subAdminCode } = req.params;
+        const result = await adminService.getSubAdminByCode(subAdminCode);
+        res.status(200).json(
+            ApiResponse.success(result, 'Sub-Admin fetched successfully')
+        );
+    }),
+
+    // Create Sub-Admin
+    createSubAdmin: asyncHandler(async (req, res) => {
+        const result = await adminService.createSubAdmin(req.body, req.userId);
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'create',
+            module: 'sub_admin',
+            moduleId: result.subAdmin._id,
+            description: `Sub-Admin ${result.subAdmin.sub_admin_code} created`,
+            newData: {
+                sub_admin_code: result.subAdmin.sub_admin_code,
+                sub_admin_type: result.subAdmin.sub_admin_type,
+                department: result.subAdmin.department
+            },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success'
+        });
+
+        res.status(201).json(
+            ApiResponse.success(result, 'Sub-Admin created successfully')
+        );
+    }),
+
+    // Update Sub-Admin Details
+    updateSubAdmin: asyncHandler(async (req, res) => {
+        const { subAdminCode } = req.params;
+
+        const oldData = await adminService.getSubAdminByCode(subAdminCode);
+        const result = await adminService.updateSubAdmin(subAdminCode, req.body, req.userId);
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'update',
+            module: 'sub_admin',
+            moduleId: result.subAdmin._id,
+            description: `Sub-Admin ${subAdminCode} updated`,
+            oldData: oldData.subAdmin,
+            newData: req.body,
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success'
+        });
+
+        res.status(200).json(
+            ApiResponse.success(result, 'Sub-Admin updated successfully')
+        );
+    }),
+
+    // Update Sub-Admin Status
+    updateSubAdminStatus: asyncHandler(async (req, res) => {
+        const { subAdminCode } = req.params;
+        const result = await adminService.updateSubAdminStatus(subAdminCode, req.body, req.userId);
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'status_change',
+            module: 'sub_admin',
+            moduleId: result.subAdmin._id,
+            description: `Sub-Admin ${subAdminCode} status changed to ${req.body.status}`,
+            newData: { status: req.body.status, reason: req.body.reason },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success'
+        });
+
+        res.status(200).json(
+            ApiResponse.success(result, `Status updated to ${req.body.status}`)
+        );
+    }),
+
+    // Delete Sub-Admin (Soft Delete)
+    deleteSubAdmin: asyncHandler(async (req, res) => {
+        const { subAdminCode } = req.params;
+
+        const oldData = await adminService.getSubAdminByCode(subAdminCode);
+        await adminService.deleteSubAdmin(subAdminCode, req.userId);
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'delete',
+            module: 'sub_admin',
+            moduleId: oldData.subAdmin._id,
+            description: `Sub-Admin ${subAdminCode} deleted`,
+            oldData: {
+                sub_admin_code: oldData.subAdmin.sub_admin_code,
+                sub_admin_type: oldData.subAdmin.sub_admin_type
+            },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success'
+        });
+
+        res.status(200).json(
+            ApiResponse.success(null, 'Sub-Admin deleted successfully')
+        );
+    }),
+
+    // Get Sub-Admin History
+    getSubAdminHistory: asyncHandler(async (req, res) => {
+        const { subAdminCode } = req.params;
+        const result = await adminService.getSubAdminHistory(subAdminCode);
+        res.status(200).json(
+            ApiResponse.success(result, 'Sub-Admin history fetched successfully')
+        );
+    }),
+
+    // Get Deleted Sub-Admins(for Deleted tab)
+    getDeletedSubAdmins: asyncHandler(async (req, res) => {
+        const result = await adminService.getDeletedSubAdmins(req.query);
+        res.status(200).json(
+            ApiResponse.success(result, 'Deleted Sub-Admins fetched successfully')
+        );
+    }),
+
+    // Restore Sub-Admin
+    restoreSubAdmin: asyncHandler(async (req, res) => {
+        const { subAdminCode } = req.params;
+        const result = await adminService.restoreSubAdmin(subAdminCode, req.userId);
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'restore',
+            module: 'sub_admin',
+            moduleId: result.subAdmin._id,
+            description: `Sub-Admin ${subAdminCode} restored`,
+            newData: { status: result.subAdmin.status },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success'
+        });
+
+        res.status(200).json(
+            ApiResponse.success(result, 'Sub-Admin restored successfully. Please activate the account.')
+        );
+    }),
+
+
+
+
+    
     // ============ REVIEW MANAGEMENT CONTROLLER ============
 
     // Get All Reviews

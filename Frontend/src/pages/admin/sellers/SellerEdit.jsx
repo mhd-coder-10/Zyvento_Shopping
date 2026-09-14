@@ -164,48 +164,10 @@ const SellerEdit = () => {
         },
     });
 
+    const [originalData, setOriginalData] = useState(null);
     const [errors, setErrors] = useState({});
 
     /* ================= FETCH SELLER ================= */
-
-    // const fetchSeller = useCallback(async () => {
-    //     if (!sellerCode) return;
-    //     setLoading(true);
-    //     setFetchError('');
-    //     try {
-    //         const res = await ApiService.getSellerByCode(sellerCode);
-    //         const data = res?.data?.data?.seller || res?.data?.seller || res?.data?.data || res?.data || {};
-
-    //         setCurrentStatus(data.account_status || 'pending');
-    //         setFormData({
-    //             business_name: data.business_name || '',
-    //             owner_name: data.owner_name || '',
-    //             email: data.email || '',
-    //             mobile_number: data.mobile_number || '',
-    //             business_type: data.business_type || 'individual',
-    //             gst_number: data.gst_number || '',
-    //             pan_number: data.pan_number || '',
-    //             business_address: {
-    //                 street: data.business_address?.street || '',
-    //                 city: data.business_address?.city || '',
-    //                 state: data.business_address?.state || '',
-    //                 country: data.business_address?.country || '',
-    //                 zip_code: data.business_address?.zip_code || '',
-    //             },
-    //             commission_rate: data.commission_rate ?? 10,
-    //             settings: {
-    //                 order_processing_time: data.settings?.order_processing_time || 24,
-    //                 return_policy: data.settings?.return_policy || '',
-    //             },
-    //         });
-    //     } catch (error) {
-    //         console.error('Error fetching seller:', error);
-    //         setFetchError(error?.response?.data?.message || error?.message || 'Failed to fetch seller');
-    //         toast.error('Failed to fetch seller');
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // }, [sellerCode]);
 
     const fetchSeller = useCallback(async ({ silent = false } = {}) => {
         if (!sellerCode) return;
@@ -226,8 +188,7 @@ const SellerEdit = () => {
                 res?.data ||
                 {};
 
-            setCurrentStatus(data.account_status || 'pending');
-            setFormData({
+            const fetchedData = {
                 business_name: data.business_name || '',
                 owner_name: data.owner_name || '',
                 email: data.email || '',
@@ -247,7 +208,11 @@ const SellerEdit = () => {
                     order_processing_time: data.settings?.order_processing_time || 24,
                     return_policy: data.settings?.return_policy || '',
                 },
-            });
+            };
+
+            setCurrentStatus(data.account_status || 'pending');
+            setFormData(fetchedData);
+            setOriginalData(fetchedData);
         } catch (error) {
             console.error('Error fetching seller:', error);
             setFetchError(
@@ -289,8 +254,51 @@ const SellerEdit = () => {
         }));
     };
 
+    /* ---------- CHECK IF FORM HAS CHANGED ---------- */
+    const hasFormChanged = () => {
+        if (!originalData) return true;
+
+        // Top-level scalar fields
+        const scalarFields = [
+            'business_name', 'owner_name', 'email', 'mobile_number',
+            'business_type', 'gst_number', 'pan_number', 'commission_rate'
+        ];
+        const scalarChanged = scalarFields.some((key) => {
+            const current = String(formData[key] ?? '').trim();
+            const original = String(originalData[key] ?? '').trim();
+            return current !== original;
+        });
+        if (scalarChanged) return true;
+
+        // Nested: business_address
+        const addressFields = ['street', 'city', 'state', 'country', 'zip_code'];
+        const addressChanged = addressFields.some((key) => {
+            const current = String(formData.business_address?.[key] ?? '').trim();
+            const original = String(originalData.business_address?.[key] ?? '').trim();
+            return current !== original;
+        });
+        if (addressChanged) return true;
+
+        // Nested: settings
+        const settingsFields = ['order_processing_time', 'return_policy'];
+        const settingsChanged = settingsFields.some((key) => {
+            const current = String(formData.settings?.[key] ?? '').trim();
+            const original = String(originalData.settings?.[key] ?? '').trim();
+            return current !== original;
+        });
+        if (settingsChanged) return true;
+
+        return false;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // No-change check
+        if (!hasFormChanged()) {
+            toast.warning('No changes detected. Please modify at least one field before saving.');
+            return;
+        }
 
         const errs = {};
         if (!formData.business_name?.trim()) errs.business_name = 'Business name is required';
@@ -307,7 +315,8 @@ const SellerEdit = () => {
         try {
             await ApiService.updateSellerDetails(sellerCode, formData);
             toast.success('Seller details updated successfully');
-            fetchSeller();
+            fetchSeller({ silent: true });
+            navigate('/admin/sellers');
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Failed to update seller');
         } finally {
@@ -351,7 +360,7 @@ const SellerEdit = () => {
             setSelectedStatus('');
             setStatusReason('');
             setStatusNotes('');
-            fetchSeller();
+            fetchSeller({ silent: true });
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Failed to update status');
         } finally {

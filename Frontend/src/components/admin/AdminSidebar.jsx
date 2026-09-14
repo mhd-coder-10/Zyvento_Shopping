@@ -36,6 +36,7 @@ const AdminSidebar = ({ isOpen, setIsOpen, isMobile, user }) => {
     const navigation = [
         { name: 'Dashboard', icon: FiHome, path: '/admin/dashboard', permission: 'view_dashboard' },
         { name: 'Users', icon: FiUsers, path: '/admin/users', permission: 'view_users' },
+        { name: 'Sub-Admins', icon: FiUsers, path: '/admin/sub-admins', permission: 'view_sub_admins' },
         { name: 'Sellers', icon: FiBriefcase, path: '/admin/sellers', permission: 'view_sellers' },
         { name: 'Employees', icon: FiUserPlus, path: '/admin/employees', permission: 'view_employees' },
         { name: 'Company Finance', path: '/admin/company-finance', permission: 'view_finance', icon: FiDollarSign },

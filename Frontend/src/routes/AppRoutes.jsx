@@ -63,11 +63,6 @@ import SellerStatus from "../pages/public/seller/SellerStatus"
 // Admin Dashboard
 import AdminDashboard from '../pages/admin/dashboard/Dashboard';
 
-// Admin - Users
-import Users from '../pages/admin/users/Users';
-import UserDetails from '../pages/admin/users/UserDetails';
-import UserManagement from '../pages/admin/users/UserManagement';
-
 // Admin - Roles
 import Roles from '../pages/admin/roles/Roles';
 import CreateRole from '../pages/admin/roles/CreateRole';
@@ -77,10 +72,19 @@ import EditRole from '../pages/admin/roles/EditRole';
 import Permissions from '../pages/admin/permissions/Permissions';
 import AssignPermissions from '../pages/admin/permissions/AssignPermissions';
 
+// Admin - Users
+import Users from '../pages/admin/users/Users';
+import UserDetails from '../pages/admin/users/UserDetails';
+import UserManagement from '../pages/admin/users/UserManagement';
+
 // Admin - Sellers
 import Sellers from '../pages/admin/sellers/Sellers';
 import SellerDetails from '../pages/admin/sellers/SellerDetails';
 import SellerEdit from '../pages/admin/sellers/SellerEdit';
+
+import SubAdminList from '../pages/admin/sub-admins/SubAdminList';
+import SubAdminDetails from '../pages/admin/sub-admins/SubAdminDetails';
+import SubAdminEdit from '../pages/admin/sub-admins/SubAdminEdit';
 
 
 // Admin - Employees
@@ -240,6 +244,11 @@ const AppRoutes = () => {
                 <Route path="sellers/edit/:sellerCode" element={<SellerEdit />} />
                 <Route path="sellers/:sellerCode" element={<SellerDetails />} />
                 <Route path="sellers" element={<Sellers />} />
+
+                {/* Sub-Admins  */}
+                <Route path="/admin/sub-admins" element={<SubAdminList />} />
+                <Route path="/admin/sub-admins/:subAdminCode" element={<SubAdminDetails />} />
+                <Route path="/admin/sub-admins/:subAdminCode/edit" element={<SubAdminEdit />} />
 
                 {/* Employees */}
                 <Route path="employees" element={<Employees />} />

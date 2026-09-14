@@ -331,7 +331,7 @@ const ApiService = {
         setAuthHeaders();
         return axios.get(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
     },
-    
+
     // Update seller details (accepts both _id and seller_code)
     updateSellerDetails: (sellerCode, data) => {
         setAuthHeaders();
@@ -349,6 +349,125 @@ const ApiService = {
         setAuthHeaders();
         return axios.delete(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
     },
+
+
+    // // =================== SUB-ADMIN APIs =============================
+
+    // // Get all sub-admins (paginated + filters)
+    // getAllSubAdmins: (params = {}) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/admin/sub-admins`, { params, headers });
+    // },
+
+    // // Get sub-admin stats (for home page cards)
+    // getSubAdminStats: () => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/admin/sub-admins/stats`, { headers });
+    // },
+
+    // // Get sub-admin by code (details + edit page)
+    // getSubAdminByCode: (subAdminCode) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/admin/sub-admins/${subAdminCode}`, { headers });
+    // },
+
+    // // Get sub-admin history (status + role)
+    // getSubAdminHistory: (subAdminCode) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/admin/sub-admins/${subAdminCode}/history`, { headers });
+    // },
+
+    // // Create sub-admin
+    // createSubAdmin: (data) => {
+    //     setAuthHeaders();
+    //     return axios.post(`${API_URL}/admin/sub-admins`, data, { headers });
+    // },
+
+    // // Update sub-admin details
+    // updateSubAdminDetails: (subAdminCode, data) => {
+    //     setAuthHeaders();
+    //     return axios.put(`${API_URL}/admin/sub-admins/${subAdminCode}`, data, { headers });
+    // },
+
+    // // Update sub-admin status (single route - handles all transitions)
+    // updateSubAdminStatus: (subAdminCode, data) => {
+    //     setAuthHeaders();
+    //     return axios.patch(`${API_URL}/admin/sub-admins/${subAdminCode}/status`, data, { headers });
+    // },
+
+    // // Delete sub-admin (soft delete - blocks user account)
+    // deleteSubAdmin: (subAdminCode) => {
+    //     setAuthHeaders();
+    //     return axios.delete(`${API_URL}/admin/sub-admins/${subAdminCode}`, { headers });
+    // },
+
+
+
+    // =================== SUB-ADMIN APIs =============================
+
+    // Get all sub-admins (paginated + filters)
+    getAllSubAdmins: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sub-admins`, { params, headers });
+    },
+
+    // Get sub-admin stats (for home page cards)
+    getSubAdminStats: () => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sub-admins/stats`, { headers });
+    },
+
+    // Get deleted sub-admins (for Deleted tab)
+    getDeletedSubAdmins: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sub-admins/deleted`, { params, headers });
+    },
+
+    // Get sub-admin by code (details + edit page)
+    getSubAdminByCode: (subAdminCode) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sub-admins/${subAdminCode}`, { headers });
+    },
+
+    // Get sub-admin history (status + role)
+    getSubAdminHistory: (subAdminCode) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sub-admins/${subAdminCode}/history`, { headers });
+    },
+
+    // Create sub-admin
+    createSubAdmin: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/sub-admins`, data, { headers });
+    },
+
+    // Update sub-admin details
+    updateSubAdminDetails: (subAdminCode, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/sub-admins/${subAdminCode}`, data, { headers });
+    },
+
+    // Update sub-admin status (single route - handles all transitions)
+    updateSubAdminStatus: (subAdminCode, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/sub-admins/${subAdminCode}/status`, data, { headers });
+    },
+
+    // Restore deleted sub-admin (sets status to inactive for safety)
+    restoreSubAdmin: (subAdminCode) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/sub-admins/${subAdminCode}/restore`, {}, { headers });
+    },
+
+    // Delete sub-admin (soft delete - blocks user account)
+    deleteSubAdmin: (subAdminCode) => {
+        setAuthHeaders();
+        return axios.delete(`${API_URL}/admin/sub-admins/${subAdminCode}`, { headers });
+    },
+
+
+
+
 
 
     // ============ REVIEW MANAGEMENT APIs ============

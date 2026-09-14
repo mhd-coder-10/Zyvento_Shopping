@@ -172,7 +172,7 @@ const UserDetails = () => {
     const addrLine = [user.address, user.city, user.state, user.postal_code, user.country].filter(Boolean).join(', ');
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-sky-50 via-[#eaf4ff] to-white pb-10">
+        <div className="min-h-screen from-sky-50 via-[#eaf4ff] to-white pb-10">
 
             {/* HEADER */}
             <AdminTopbar

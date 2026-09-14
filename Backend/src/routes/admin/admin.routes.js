@@ -8,7 +8,7 @@ const asyncHandler = require('../../utils/asyncHandler');
 
 const adminController = require('../../controllers/admin/admin.controller');
 const auth = require('../../middleware/auth.middleware');
-const { authorize, checkPermission } = require('../../middleware/authorization.middleware');
+const { checkSellerAccess, authorize, checkSubAdminAccess, checkPermission } = require('../../middleware/authorization.middleware');
 const { validate } = require('../../middleware/validation.middleware');
 const adminValidation = require('../../validations/admin.validation');
 
@@ -244,6 +244,182 @@ router.delete(
     adminController.deleteSeller
 );
 
+
+// ============== SUB-ADMIN ROUTES ==================
+
+// // Get All Sub-Admins
+// router.get(
+//     '/sub-admins',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.getAllSubAdmins, 'query'),
+//     adminController.getAllSubAdmins
+// );
+
+// // Get Sub-Admin Stats
+// router.get(
+//     '/sub-admins/stats',
+//     checkPermission('manage_sub_admins'),
+//     adminController.getSubAdminStats
+// );
+
+// // Get Sub-Admin By Code
+// router.get(
+//     '/sub-admins/:subAdminCode',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.subAdminCodeParam, 'params'),
+//     adminController.getSubAdminByCode
+// );
+
+// // Get Sub-Admin History
+// router.get(
+//     '/sub-admins/:subAdminCode/history',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.subAdminCodeParam, 'params'),
+//     adminController.getSubAdminHistory
+// );
+
+// // Create Sub-Admin
+// router.post(
+//     '/sub-admins',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.createSubAdmin),
+//     adminController.createSubAdmin
+// );
+
+// // Update Sub-Admin Details
+// router.put(
+//     '/sub-admins/:subAdminCode',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.subAdminCodeParam, 'params'),
+//     validate(adminValidation.updateSubAdmin),
+//     adminController.updateSubAdmin
+// );
+
+// // Update Sub-Admin Status
+// router.patch(
+//     '/sub-admins/:subAdminCode/status',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.subAdminCodeParam, 'params'),
+//     validate(adminValidation.updateSubAdminStatus),
+//     adminController.updateSubAdminStatus
+// );
+
+// // Delete Sub-Admin (Soft)
+// router.delete(
+//     '/sub-admins/:subAdminCode',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.subAdminCodeParam, 'params'),
+//     adminController.deleteSubAdmin
+// );
+
+// // Get Deleted Sub-Admins — ye /stats se PEHLE rakho
+// router.get(
+//     '/sub-admins/deleted',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.getDeletedSubAdmins, 'query'),
+//     adminController.getDeletedSubAdmins
+// );
+
+// // Restore Sub-Admin
+// router.put(
+//     '/sub-admins/:subAdminCode/restore',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.subAdminCodeParam, 'params'),
+//     adminController.restoreSubAdmin
+// );
+
+// // '/sub-admins/deleted' → '/sub-admins/:subAdminCode'
+// router.get(
+//     '/sub-admins/:subAdminCode',
+//     checkPermission('manage_sub_admins'),
+//     validate(adminValidation.subAdminCodeParam, 'params'),
+//     adminController.getSubAdminByCode
+// );
+
+
+// Get all Sub-Admins
+router.get(
+    '/sub-admins',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.getAllSubAdmins, 'query'),
+    adminController.getAllSubAdmins
+);
+
+// Get Sub-Admin stats
+// Must be before /sub-admins/:subAdminCode to avoid matching "stats" as a code
+router.get(
+    '/sub-admins/stats',
+    checkPermission('manage_sub_admins'),
+    adminController.getSubAdminStats
+);
+
+// Get deleted Sub-Admins
+// Must be before /sub-admins/:subAdminCode to avoid matching "deleted" as a code
+router.get(
+    '/sub-admins/deleted',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.getDeletedSubAdmins, 'query'),
+    adminController.getDeletedSubAdmins
+);
+
+// Create Sub-Admin
+router.post(
+    '/sub-admins',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.createSubAdmin),
+    adminController.createSubAdmin
+);
+
+// Get Sub-Admin history
+router.get(
+    '/sub-admins/:subAdminCode/history',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.subAdminCodeParam, 'params'),
+    adminController.getSubAdminHistory
+);
+
+// Update Sub-Admin details
+router.put(
+    '/sub-admins/:subAdminCode',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.subAdminCodeParam, 'params'),
+    validate(adminValidation.updateSubAdmin),
+    adminController.updateSubAdmin
+);
+
+// Update Sub-Admin status
+router.put(
+    '/sub-admins/:subAdminCode/status',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.subAdminCodeParam, 'params'),
+    validate(adminValidation.updateSubAdminStatus),
+    adminController.updateSubAdminStatus
+);
+
+// Restore deleted Sub-Admin
+router.put(
+    '/sub-admins/:subAdminCode/restore',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.subAdminCodeParam, 'params'),
+    adminController.restoreSubAdmin
+);
+
+// Delete Sub-Admin (soft delete)
+router.delete(
+    '/sub-admins/:subAdminCode',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.subAdminCodeParam, 'params'),
+    adminController.deleteSubAdmin
+);
+
+// Get Sub-Admin by code
+// Must be last among /sub-admins/:subAdminCode patterns
+router.get(
+    '/sub-admins/:subAdminCode',
+    checkPermission('manage_sub_admins'),
+    validate(adminValidation.subAdminCodeParam, 'params'),
+    adminController.getSubAdminByCode
+);
 
 
 // ============ REVIEW MANAGEMENT ROUTES ============

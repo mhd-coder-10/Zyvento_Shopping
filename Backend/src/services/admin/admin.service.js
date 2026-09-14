@@ -875,7 +875,7 @@ class AdminService {
 
     // Get Seller By ID or Code (Enhanced)
     async getSellerById(identifier) {
-   
+
         const query = this._buildSellerQuery(identifier);
 
         const seller = await Seller.findOne(query)
@@ -1148,7 +1148,7 @@ class AdminService {
         ]);
     }
 
-    // ============ DELETE SELLER (Cascade - Removes all related data) ============
+    // DELETE SELLER (Cascade - Removes all related data)
     async deleteSeller(identifier) {
 
         const query = this._buildSellerQuery(identifier);
@@ -1277,7 +1277,973 @@ class AdminService {
 
 
 
-    
+
+    // ============ SUB-ADMINS MANAGEMENT SERVICE ============
+
+    // Generate Sub Admin Code
+    // _generateSubAdminCode() {
+    //     const ts = Date.now().toString(36).toUpperCase();
+    //     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    //     return `SUBA-${ts}${rand}`;
+    // }
+
+    // // Get All Sub-Admins (paginated + filters + view switching)
+    // // view: 'active' (default) | 'deleted'
+    // async getAllSubAdmins(query = {}) {
+    //     const {
+    //         page = 1,
+    //         limit = 10,
+    //         search = '',
+    //         sub_admin_type = 'all',
+    //         status = 'all',
+    //         department = 'all',
+    //         view = 'active',
+    //         sort_by = 'created_at',
+    //         sort_order = 'desc',
+    //         start_date,
+    //         end_date
+    //     } = query;
+
+    //     // 👇 View-based filter — safe with $ne for legacy data
+    //     const filter = view === 'deleted'
+    //         ? { is_deleted: true }
+    //         : { is_deleted: { $ne: true } };
+
+    //     if (sub_admin_type !== 'all') filter.sub_admin_type = sub_admin_type;
+    //     if (status !== 'all') filter.status = status;
+    //     if (department !== 'all') filter.department = department;
+
+    //     if (search) {
+    //         filter.$or = [
+    //             { sub_admin_code: { $regex: search, $options: 'i' } },
+    //             { full_name: { $regex: search, $options: 'i' } },
+    //             { email: { $regex: search, $options: 'i' } },
+    //             { department: { $regex: search, $options: 'i' } }
+    //         ];
+    //     }
+
+    //     if (start_date || end_date) {
+    //         filter.created_at = {};
+    //         if (start_date) filter.created_at.$gte = new Date(start_date);
+    //         if (end_date) filter.created_at.$lte = new Date(end_date);
+    //     }
+
+    //     const skip = (page - 1) * limit;
+    //     const sort = { [sort_by]: sort_order === 'asc' ? 1 : -1 };
+
+    //     const [subAdmins, total] = await Promise.all([
+    //         SubAdmin.find(filter)
+    //             .populate('user_id', 'profile_image email mobile_number')
+    //             .populate('current_role_ids', 'name display_name')
+    //             .sort(sort)
+    //             .skip(skip)
+    //             .limit(Number(limit))
+    //             .lean(),
+    //         SubAdmin.countDocuments(filter)
+    //     ]);
+
+    //     return {
+    //         sub_admins: subAdmins,
+    //         pagination: {
+    //             total,
+    //             page: Number(page),
+    //             limit: Number(limit),
+    //             total_pages: Math.ceil(total / limit)
+    //         }
+    //     };
+    // }
+
+    // // Get Subadmin by code
+    // async getSubAdminByCode(subAdminCode) {
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: { $ne: true }
+    //     })
+    //         .populate('user_id', 'profile_image email mobile_number user_type')
+    //         .populate('current_role_ids', 'name display_name permissions')
+    //         .populate('assigned_by', 'email')
+    //         .populate('suspended_by', 'email')
+    //         .populate('status_history.changed_by', 'email')
+    //         .lean();
+
+    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+    //     return { subAdmin };
+    // }
+
+    // // Get Sub Admin State
+    // async getSubAdminStats() {
+    //     const baseFilter = { is_deleted: { $ne: true } };
+    //     const [total, active, pending, suspended, inactive, deletedCount] = await Promise.all([
+    //         SubAdmin.countDocuments(baseFilter),
+    //         SubAdmin.countDocuments({ ...baseFilter, status: 'active' }),
+    //         SubAdmin.countDocuments({ ...baseFilter, status: 'pending' }),
+    //         SubAdmin.countDocuments({ ...baseFilter, status: 'suspended' }),
+    //         SubAdmin.countDocuments({ ...baseFilter, status: 'inactive' }),
+    //         SubAdmin.countDocuments({ is_deleted: true })
+    //     ]);
+
+    //     const byType = await SubAdmin.aggregate([
+    //         { $match: { is_deleted: { $ne: true } } },
+    //         { $group: { _id: '$sub_admin_type', count: { $sum: 1 } } }
+    //     ]);
+
+    //     return {
+    //         total,
+    //         active,
+    //         pending,
+    //         suspended,
+    //         inactive,
+    //         deleted: deletedCount,
+    //         by_type: byType.reduce((acc, t) => {
+    //             acc[t._id] = t.count;
+    //             return acc;
+    //         }, {})
+    //     };
+    // }
+
+    // // Create Sub Admin
+    // async createSubAdmin(data, assignedByUserId) {
+    //     const { user_id, sub_admin_type, department, designation, notes, current_role_ids = [] } = data;
+
+    //     const user = await User.findById(user_id);
+    //     if (!user) throw ApiError.notFound('User not found');
+
+    //     const existing = await SubAdmin.findOne({ user_id, is_deleted: { $ne: true } });
+    //     if (existing) throw ApiError.badRequest('User is already a Sub-Admin');
+
+    //     if (current_role_ids.length > 0) {
+    //         const roleCount = await Role.countDocuments({ _id: { $in: current_role_ids } });
+    //         if (roleCount !== current_role_ids.length) {
+    //             throw ApiError.badRequest('One or more roles are invalid');
+    //         }
+    //     }
+
+    //     const subAdmin = await SubAdmin.create({
+    //         sub_admin_code: this._generateSubAdminCode(),
+    //         user_id,
+    //         assigned_by: assignedByUserId,
+    //         email: user.email,
+    //         full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+    //         mobile_number: user.mobile_number || null,
+    //         sub_admin_type,
+    //         department,
+    //         designation: designation || null,
+    //         current_role_ids,
+    //         role_history: current_role_ids.length > 0
+    //             ? [{ role_ids: current_role_ids, assigned_by: assignedByUserId, reason: 'Initial assignment' }]
+    //             : [],
+    //         status: 'pending',
+    //         notes: notes || '',
+    //         status_history: [{
+    //             from: null,
+    //             to: 'pending',
+    //             changed_by: assignedByUserId,
+    //             reason: 'Sub-Admin created'
+    //         }]
+    //     });
+
+    //     return { subAdmin };
+    // }
+
+    // // Update Sub-admin Profile
+    // async updateSubAdmin(subAdminCode, data, updatedByUserId) {
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: { $ne: true }
+    //     });
+    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+    //     const allowed = ['sub_admin_type', 'department', 'designation', 'notes', 'mobile_number', 'full_name'];
+    //     allowed.forEach((key) => {
+    //         if (data[key] !== undefined) subAdmin[key] = data[key];
+    //     });
+
+    //     if (Array.isArray(data.current_role_ids)) {
+    //         const roleCount = await Role.countDocuments({ _id: { $in: data.current_role_ids } });
+    //         if (roleCount !== data.current_role_ids.length) {
+    //             throw ApiError.badRequest('One or more roles are invalid');
+    //         }
+    //         subAdmin.current_role_ids = data.current_role_ids;
+    //         subAdmin.role_history.push({
+    //             role_ids: data.current_role_ids,
+    //             assigned_by: updatedByUserId,
+    //             assigned_at: new Date(),
+    //             reason: data.role_change_reason || 'Roles updated'
+    //         });
+    //     }
+
+    //     await subAdmin.save();
+
+    //     if (data.full_name || data.mobile_number) {
+    //         await User.updateOne(
+    //             { _id: subAdmin.user_id },
+    //             {
+    //                 $set: {
+    //                     ...(data.full_name && {
+    //                         first_name: data.full_name.split(' ')[0] || '',
+    //                         last_name: data.full_name.split(' ').slice(1).join(' ') || ''
+    //                     }),
+    //                     ...(data.mobile_number && { mobile_number: data.mobile_number })
+    //                 }
+    //             }
+    //         );
+    //     }
+
+    //     return { subAdmin };
+    // }
+
+    // // Update Status — with User account_status sync
+    // async updateSubAdminStatus(subAdminCode, { status, reason, notes }, changedByUserId) {
+    //     const ALLOWED_TRANSITIONS = {
+    //         pending: ['active', 'inactive'],
+    //         active: ['inactive', 'suspended'],
+    //         inactive: ['active', 'suspended'],
+    //         suspended: ['active', 'inactive']
+    //     };
+
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: { $ne: true }
+    //     });
+    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+    //     if (subAdmin.status === status) {
+    //         throw ApiError.badRequest(`Sub-Admin is already ${status}`);
+    //     }
+
+    //     const allowed = ALLOWED_TRANSITIONS[subAdmin.status] || [];
+    //     if (!allowed.includes(status)) {
+    //         throw ApiError.badRequest(
+    //             `Invalid transition: ${subAdmin.status} → ${status}. Allowed: ${allowed.join(', ')}`
+    //         );
+    //     }
+
+    //     if (status === 'suspended' && (!reason || !reason.trim())) {
+    //         throw ApiError.badRequest('Suspension reason is required');
+    //     }
+
+    //     const previousStatus = subAdmin.status;
+    //     subAdmin.status = status;
+
+    //     if (status === 'suspended') {
+    //         subAdmin.suspended_by = changedByUserId;
+    //         subAdmin.suspended_reason = reason;
+    //         subAdmin.suspended_at = new Date();
+    //     } else if (previousStatus === 'suspended') {
+    //         subAdmin.suspended_by = null;
+    //         subAdmin.suspended_reason = null;
+    //         subAdmin.suspended_at = null;
+    //     }
+
+    //     subAdmin.status_history.push({
+    //         from: previousStatus,
+    //         to: status,
+    //         changed_by: changedByUserId,
+    //         reason: reason || '',
+    //         notes: notes || '',
+    //         changed_at: new Date()
+    //     });
+
+    //     await subAdmin.save();
+
+    //     // Sync User account_status
+    //     const userStatusMap = {
+    //         active: 'active',
+    //         inactive: 'inactive',
+    //         suspended: 'blocked',
+    //         pending: 'pending'
+    //     };
+    //     await User.updateOne(
+    //         { _id: subAdmin.user_id },
+    //         { $set: { account_status: userStatusMap[status] || 'pending' } }
+    //     );
+
+    //     return { subAdmin };
+    // }
+
+    // // Soft Delete Sub-Admin — Blocks login + hides from list
+    // async deleteSubAdmin(subAdminCode, deletedByUserId) {
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: { $ne: true }
+    //     });
+    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+    //     subAdmin.is_deleted = true;
+    //     subAdmin.deleted_at = new Date();
+    //     subAdmin.deleted_by = deletedByUserId;
+
+    //     subAdmin.status_history.push({
+    //         from: subAdmin.status,
+    //         to: 'deleted',
+    //         changed_by: deletedByUserId,
+    //         reason: 'Sub-Admin deleted by admin',
+    //         changed_at: new Date()
+    //     });
+
+    //     await subAdmin.save();
+
+    //     // Block linked user account — login pe access nahi milega
+    //     await User.updateOne(
+    //         { _id: subAdmin.user_id },
+    //         { $set: { account_status: 'deleted' } }
+    //     );
+
+    //     return { subAdmin };
+    // }
+
+    // // Get Deleted Sub-Admins (for Deleted tab)
+    // async getDeletedSubAdmins(query = {}) {
+    //     const {
+    //         page = 1,
+    //         limit = 10,
+    //         search = '',
+    //         sub_admin_type = 'all',
+    //         sort_by = 'deleted_at',
+    //         sort_order = 'desc'
+    //     } = query;
+
+    //     const filter = { is_deleted: true };
+
+    //     if (sub_admin_type !== 'all') filter.sub_admin_type = sub_admin_type;
+
+    //     if (search) {
+    //         filter.$or = [
+    //             { sub_admin_code: { $regex: search, $options: 'i' } },
+    //             { full_name: { $regex: search, $options: 'i' } },
+    //             { email: { $regex: search, $options: 'i' } }
+    //         ];
+    //     }
+
+    //     const skip = (page - 1) * limit;
+    //     const sort = { [sort_by]: sort_order === 'asc' ? 1 : -1 };
+
+    //     const [subAdmins, total] = await Promise.all([
+    //         SubAdmin.find(filter)
+    //             .populate('deleted_by', 'email first_name last_name')
+    //             .sort(sort)
+    //             .skip(skip)
+    //             .limit(Number(limit))
+    //             .lean(),
+    //         SubAdmin.countDocuments(filter)
+    //     ]);
+
+    //     return {
+    //         sub_admins: subAdmins,
+    //         pagination: {
+    //             total,
+    //             page: Number(page),
+    //             limit: Number(limit),
+    //             total_pages: Math.ceil(total / limit)
+    //         }
+    //     };
+    // }
+
+    // // Restore Sub-Admin — Bring back with previous status
+    // async restoreSubAdmin(subAdminCode, restoredByUserId) {
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: true
+    //     });
+    //     if (!subAdmin) throw ApiError.notFound('Deleted Sub-Admin not found');
+
+    //     // Restore to INACTIVE state — manager explicitly activate karega
+    //     // (Safety: agar status active tha, tab bhi restore karte waqt inactive rakho)
+    //     const restoreStatus = subAdmin.status === 'active' ? 'inactive' : subAdmin.status;
+
+    //     subAdmin.is_deleted = false;
+    //     subAdmin.deleted_at = null;
+    //     subAdmin.deleted_by = null;
+    //     subAdmin.status = restoreStatus;
+
+    //     subAdmin.status_history.push({
+    //         from: 'deleted',
+    //         to: restoreStatus,
+    //         changed_by: restoredByUserId,
+    //         reason: 'Sub-Admin restored by admin',
+    //         notes: 'Restored to inactive — activate manually after review',
+    //         changed_at: new Date()
+    //     });
+
+    //     await subAdmin.save();
+
+    //     // Sync User account_status — inactive so login works but no dashboard access
+    //     await User.updateOne(
+    //         { _id: subAdmin.user_id },
+    //         { $set: { account_status: 'inactive' } }
+    //     );
+
+    //     return { subAdmin };
+    // }
+
+    // // Get History
+    // async getSubAdminHistory(subAdminCode) {
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: { $ne: true }
+    //     })
+    //         .select('status_history role_history')
+    //         .populate('status_history.changed_by', 'email first_name last_name')
+    //         .lean();
+
+    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+    //     return subAdmin;
+    // }
+
+
+
+
+    // ============ SUB-ADMIN MANAGEMENT SERVICE ============
+
+    // Generate unique Sub-Admin code
+    _generateSubAdminCode() {
+        const ts = Date.now().toString(36).toUpperCase();
+        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+        return `SUBA-${ts}${rand}`;
+    }
+
+    // Get all Sub-Admins (paginated + filters + view switching)
+    // view: 'active' (default) | 'deleted'
+    async getAllSubAdmins(query = {}) {
+        const {
+            page = 1,
+            limit = 10,
+            search = '',
+            sub_admin_type = 'all',
+            status = 'all',
+            department = 'all',
+            view = 'active',
+            sort_by = 'created_at',
+            sort_order = 'desc',
+            start_date,
+            end_date
+        } = query;
+
+        // View-based filter (uses $ne to handle legacy records)
+        const filter = view === 'deleted'
+            ? { is_deleted: true }
+            : { is_deleted: { $ne: true } };
+
+        if (sub_admin_type !== 'all') filter.sub_admin_type = sub_admin_type;
+        if (status !== 'all') filter.status = status;
+        if (department !== 'all') filter.department = department;
+
+        if (search) {
+            filter.$or = [
+                { sub_admin_code: { $regex: search, $options: 'i' } },
+                { full_name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { department: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        if (start_date || end_date) {
+            filter.created_at = {};
+            if (start_date) filter.created_at.$gte = new Date(start_date);
+            if (end_date) filter.created_at.$lte = new Date(end_date);
+        }
+
+        const skip = (page - 1) * limit;
+        const sort = { [sort_by]: sort_order === 'asc' ? 1 : -1 };
+
+        const [subAdmins, total] = await Promise.all([
+            SubAdmin.find(filter)
+                .populate('user_id', 'profile_image email mobile_number')
+                .populate('current_role_ids', 'name display_name')
+                .sort(sort)
+                .skip(skip)
+                .limit(Number(limit))
+                .lean(),
+            SubAdmin.countDocuments(filter)
+        ]);
+
+        return {
+            sub_admins: subAdmins,
+            pagination: {
+                total,
+                page: Number(page),
+                limit: Number(limit),
+                total_pages: Math.ceil(total / limit)
+            }
+        };
+    }
+
+    // Get Sub-Admin by code
+    async getSubAdminByCode(subAdminCode) {
+        const subAdmin = await SubAdmin.findOne({
+            sub_admin_code: subAdminCode,
+            is_deleted: { $ne: true }
+        })
+            .populate('user_id', 'profile_image email mobile_number user_type')
+            .populate('current_role_ids', 'name display_name permissions')
+            .populate('assigned_by', 'email')
+            .populate('suspended_by', 'email')
+            .populate('status_history.changed_by', 'email')
+            .lean();
+
+        if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+        return { subAdmin };
+    }
+
+    // Get Sub-Admin stats
+    async getSubAdminStats() {
+        const baseFilter = { is_deleted: { $ne: true } };
+
+        const [total, active, pending, suspended, inactive, deletedCount] = await Promise.all([
+            SubAdmin.countDocuments(baseFilter),
+            SubAdmin.countDocuments({ ...baseFilter, status: 'active' }),
+            SubAdmin.countDocuments({ ...baseFilter, status: 'pending' }),
+            SubAdmin.countDocuments({ ...baseFilter, status: 'suspended' }),
+            SubAdmin.countDocuments({ ...baseFilter, status: 'inactive' }),
+            SubAdmin.countDocuments({ is_deleted: true })
+        ]);
+
+        const byType = await SubAdmin.aggregate([
+            { $match: { is_deleted: { $ne: true } } },
+            { $group: { _id: '$sub_admin_type', count: { $sum: 1 } } }
+        ]);
+
+        return {
+            total,
+            active,
+            pending,
+            suspended,
+            inactive,
+            deleted: deletedCount,
+            by_type: byType.reduce((acc, t) => {
+                acc[t._id] = t.count;
+                return acc;
+            }, {})
+        };
+    }
+
+    // Create Sub-Admin
+    async createSubAdmin(data, assignedByUserId) {
+        const { user_id, sub_admin_type, department, designation, notes, current_role_ids = [] } = data;
+
+        const user = await User.findById(user_id);
+        if (!user) throw ApiError.notFound('User not found');
+
+        const existing = await SubAdmin.findOne({ user_id, is_deleted: { $ne: true } });
+        if (existing) throw ApiError.badRequest('User is already a Sub-Admin');
+
+        if (current_role_ids.length > 0) {
+            const roleCount = await Role.countDocuments({ _id: { $in: current_role_ids } });
+            if (roleCount !== current_role_ids.length) {
+                throw ApiError.badRequest('One or more roles are invalid');
+            }
+        }
+
+        const subAdmin = await SubAdmin.create({
+            sub_admin_code: this._generateSubAdminCode(),
+            user_id,
+            assigned_by: assignedByUserId,
+            email: user.email,
+            full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+            mobile_number: user.mobile_number || null,
+            sub_admin_type,
+            department,
+            designation: designation || null,
+            current_role_ids,
+            role_history: current_role_ids.length > 0
+                ? [{ role_ids: current_role_ids, assigned_by: assignedByUserId, reason: 'Initial assignment' }]
+                : [],
+            status: 'pending',
+            notes: notes || '',
+            status_history: [{
+                from: null,
+                to: 'pending',
+                changed_by: assignedByUserId,
+                reason: 'Sub-Admin created'
+            }]
+        });
+
+        return { subAdmin };
+    }
+
+    // Update Sub-Admin profile
+    // async updateSubAdmin(subAdminCode, data, updatedByUserId) {
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: { $ne: true }
+    //     });
+    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+    //     const allowed = ['sub_admin_type', 'department', 'designation', 'notes', 'mobile_number', 'full_name'];
+    //     allowed.forEach((key) => {
+    //         if (data[key] !== undefined) subAdmin[key] = data[key];
+    //     });
+
+    //     if (Array.isArray(data.current_role_ids)) {
+    //         const roleCount = await Role.countDocuments({ _id: { $in: data.current_role_ids } });
+    //         if (roleCount !== data.current_role_ids.length) {
+    //             throw ApiError.badRequest('One or more roles are invalid');
+    //         }
+    //         subAdmin.current_role_ids = data.current_role_ids;
+    //         subAdmin.role_history.push({
+    //             role_ids: data.current_role_ids,
+    //             assigned_by: updatedByUserId,
+    //             assigned_at: new Date(),
+    //             reason: data.role_change_reason || 'Roles updated'
+    //         });
+    //     }
+
+    //     await subAdmin.save();
+
+    //     // Sync denormalized fields back to User if changed
+    //     if (data.full_name || data.mobile_number) {
+    //         await User.updateOne(
+    //             { _id: subAdmin.user_id },
+    //             {
+    //                 $set: {
+    //                     ...(data.full_name && {
+    //                         first_name: data.full_name.split(' ')[0] || '',
+    //                         last_name: data.full_name.split(' ').slice(1).join(' ') || ''
+    //                     }),
+    //                     ...(data.mobile_number && { mobile_number: data.mobile_number })
+    //                 }
+    //             }
+    //         );
+    //     }
+
+    //     return { subAdmin };
+    // }
+    // Update Sub-Admin profile
+    async updateSubAdmin(subAdminCode, data, updatedByUserId) {
+        const subAdmin = await SubAdmin.findOne({
+            sub_admin_code: subAdminCode,
+            is_deleted: { $ne: true }
+        });
+        if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+        const allowed = ['sub_admin_type', 'department', 'designation', 'notes', 'mobile_number', 'full_name'];
+        allowed.forEach((key) => {
+            // Skip if undefined, null, or empty string
+            const val = data[key];
+            if (val !== undefined && val !== null && String(val).trim() !== '') {
+                subAdmin[key] = typeof val === 'string' ? val.trim() : val;
+            }
+        });
+
+        if (Array.isArray(data.current_role_ids)) {
+            const roleCount = await Role.countDocuments({ _id: { $in: data.current_role_ids } });
+            if (roleCount !== data.current_role_ids.length) {
+                throw ApiError.badRequest('One or more roles are invalid');
+            }
+            subAdmin.current_role_ids = data.current_role_ids;
+            subAdmin.role_history.push({
+                role_ids: data.current_role_ids,
+                assigned_by: updatedByUserId,
+                assigned_at: new Date(),
+                reason: data.role_change_reason || 'Roles updated'
+            });
+        }
+
+        await subAdmin.save();
+
+        // Sync denormalized fields back to User if changed
+        if (data.full_name || data.mobile_number) {
+            await User.updateOne(
+                { _id: subAdmin.user_id },
+                {
+                    $set: {
+                        ...(data.full_name && data.full_name.trim() && {
+                            first_name: data.full_name.trim().split(' ')[0] || '',
+                            last_name: data.full_name.trim().split(' ').slice(1).join(' ') || ''
+                        }),
+                        ...(data.mobile_number && data.mobile_number.trim() && { mobile_number: data.mobile_number.trim() })
+                    }
+                }
+            );
+        }
+
+        return { subAdmin };
+    }
+
+    // Update Sub-Admin status (with User account_status sync)
+    // async updateSubAdminStatus(subAdminCode, { status, reason, notes }, changedByUserId) {
+    //     const ALLOWED_TRANSITIONS = {
+    //         pending: ['active', 'inactive'],
+    //         active: ['inactive', 'suspended'],
+    //         inactive: ['active', 'suspended'],
+    //         suspended: ['active', 'inactive']
+    //     };
+
+    //     const subAdmin = await SubAdmin.findOne({
+    //         sub_admin_code: subAdminCode,
+    //         is_deleted: { $ne: true }
+    //     });
+    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+    //     if (subAdmin.status === status) {
+    //         throw ApiError.badRequest(`Sub-Admin is already ${status}`);
+    //     }
+
+    //     const allowed = ALLOWED_TRANSITIONS[subAdmin.status] || [];
+    //     if (!allowed.includes(status)) {
+    //         throw ApiError.badRequest(
+    //             `Invalid transition: ${subAdmin.status} → ${status}. Allowed: ${allowed.join(', ')}`
+    //         );
+    //     }
+
+    //     if (status === 'suspended' && (!reason || !reason.trim())) {
+    //         throw ApiError.badRequest('Suspension reason is required');
+    //     }
+
+    //     const previousStatus = subAdmin.status;
+    //     subAdmin.status = status;
+
+    //     if (status === 'suspended') {
+    //         subAdmin.suspended_by = changedByUserId;
+    //         subAdmin.suspended_reason = reason;
+    //         subAdmin.suspended_at = new Date();
+    //     } else if (previousStatus === 'suspended') {
+    //         subAdmin.suspended_by = null;
+    //         subAdmin.suspended_reason = null;
+    //         subAdmin.suspended_at = null;
+    //     }
+
+    //     subAdmin.status_history.push({
+    //         from: previousStatus,
+    //         to: status,
+    //         changed_by: changedByUserId,
+    //         reason: reason || '',
+    //         notes: notes || '',
+    //         changed_at: new Date()
+    //     });
+
+    //     await subAdmin.save();
+
+    //     // Sync User account_status based on Sub-Admin status
+    //     const userStatusMap = {
+    //         active: 'active',
+    //         inactive: 'inactive',
+    //         suspended: 'blocked',
+    //         pending: 'pending'
+    //     };
+    //     await User.updateOne(
+    //         { _id: subAdmin.user_id },
+    //         { $set: { account_status: userStatusMap[status] || 'pending' } }
+    //     );
+
+    //     return { subAdmin };
+    // }
+
+    // Update Sub-Admin status (with User account_status sync)
+    async updateSubAdminStatus(subAdminCode, { status, reason, notes }, changedByUserId) {
+        const ALLOWED_TRANSITIONS = {
+            pending: ['active', 'inactive'],
+            active: ['inactive', 'suspended'],
+            inactive: ['active', 'suspended'],
+            suspended: ['active', 'inactive']
+        };
+
+        const subAdmin = await SubAdmin.findOne({
+            sub_admin_code: subAdminCode,
+            is_deleted: { $ne: true }
+        });
+        if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+        if (subAdmin.status === status) {
+            throw ApiError.badRequest(`Sub-Admin is already ${status}`);
+        }
+
+        const allowed = ALLOWED_TRANSITIONS[subAdmin.status] || [];
+        if (!allowed.includes(status)) {
+            throw ApiError.badRequest(
+                `Invalid transition: ${subAdmin.status} → ${status}. Allowed: ${allowed.join(', ')}`
+            );
+        }
+
+        if (status === 'suspended' && (!reason || !reason.trim())) {
+            throw ApiError.badRequest('Suspension reason is required');
+        }
+
+        const previousStatus = subAdmin.status;
+
+        // Build update payload (only status-related fields)
+        const statusHistoryEntry = {
+            from: previousStatus,
+            to: status,
+            changed_by: changedByUserId,
+            reason: reason || '',
+            notes: notes || '',
+            changed_at: new Date()
+        };
+
+        const updatePayload = {
+            status,
+            $push: { status_history: statusHistoryEntry }
+        };
+
+        if (status === 'suspended') {
+            updatePayload.suspended_by = changedByUserId;
+            updatePayload.suspended_reason = reason;
+            updatePayload.suspended_at = new Date();
+        } else if (previousStatus === 'suspended') {
+            updatePayload.suspended_by = null;
+            updatePayload.suspended_reason = null;
+            updatePayload.suspended_at = null;
+        }
+
+        // 👇 Use findOneAndUpdate to only touch status-related fields
+        const updated = await SubAdmin.findOneAndUpdate(
+            { _id: subAdmin._id },
+            updatePayload,
+            { new: true }
+        );
+
+        // Sync User account_status
+        const userStatusMap = {
+            active: 'active',
+            inactive: 'inactive',
+            suspended: 'blocked',
+            pending: 'pending'
+        };
+        await User.updateOne(
+            { _id: subAdmin.user_id },
+            { $set: { account_status: userStatusMap[status] || 'pending' } }
+        );
+
+        return { subAdmin: updated };
+    }
+
+    // Soft delete Sub-Admin (hides from list + blocks login)
+    async deleteSubAdmin(subAdminCode, deletedByUserId) {
+        const subAdmin = await SubAdmin.findOne({
+            sub_admin_code: subAdminCode,
+            is_deleted: { $ne: true }
+        });
+        if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+
+        subAdmin.is_deleted = true;
+        subAdmin.deleted_at = new Date();
+        subAdmin.deleted_by = deletedByUserId;
+
+        subAdmin.status_history.push({
+            from: subAdmin.status,
+            to: 'deleted',
+            changed_by: deletedByUserId,
+            reason: 'Sub-Admin deleted by admin',
+            changed_at: new Date()
+        });
+
+        await subAdmin.save();
+
+        // Block linked user account to prevent login
+        await User.updateOne(
+            { _id: subAdmin.user_id },
+            { $set: { account_status: 'deleted' } }
+        );
+
+        return { subAdmin };
+    }
+
+    // Get deleted Sub-Admins (for Deleted tab)
+    async getDeletedSubAdmins(query = {}) {
+        const {
+            page = 1,
+            limit = 10,
+            search = '',
+            sub_admin_type = 'all',
+            sort_by = 'deleted_at',
+            sort_order = 'desc'
+        } = query;
+
+        const filter = { is_deleted: true };
+
+        if (sub_admin_type !== 'all') filter.sub_admin_type = sub_admin_type;
+
+        if (search) {
+            filter.$or = [
+                { sub_admin_code: { $regex: search, $options: 'i' } },
+                { full_name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (page - 1) * limit;
+        const sort = { [sort_by]: sort_order === 'asc' ? 1 : -1 };
+
+        const [subAdmins, total] = await Promise.all([
+            SubAdmin.find(filter)
+                .populate('deleted_by', 'email first_name last_name')
+                .sort(sort)
+                .skip(skip)
+                .limit(Number(limit))
+                .lean(),
+            SubAdmin.countDocuments(filter)
+        ]);
+
+        return {
+            sub_admins: subAdmins,
+            pagination: {
+                total,
+                page: Number(page),
+                limit: Number(limit),
+                total_pages: Math.ceil(total / limit)
+            }
+        };
+    }
+
+    // Restore Sub-Admin (returns to inactive state for safety)
+    async restoreSubAdmin(subAdminCode, restoredByUserId) {
+        const subAdmin = await SubAdmin.findOne({
+            sub_admin_code: subAdminCode,
+            is_deleted: true
+        });
+        if (!subAdmin) throw ApiError.notFound('Deleted Sub-Admin not found');
+
+        // Restore to inactive state — manager must activate manually
+        // (Safety: even if previous status was active, restore as inactive)
+        const restoreStatus = subAdmin.status === 'active' ? 'inactive' : subAdmin.status;
+
+        subAdmin.is_deleted = false;
+        subAdmin.deleted_at = null;
+        subAdmin.deleted_by = null;
+        subAdmin.status = restoreStatus;
+
+        subAdmin.status_history.push({
+            from: 'deleted',
+            to: restoreStatus,
+            changed_by: restoredByUserId,
+            reason: 'Sub-Admin restored by admin',
+            notes: 'Restored to inactive — activate manually after review',
+            changed_at: new Date()
+        });
+
+        await subAdmin.save();
+
+        // Sync User account_status to inactive (login allowed but no dashboard access)
+        await User.updateOne(
+            { _id: subAdmin.user_id },
+            { $set: { account_status: 'inactive' } }
+        );
+
+        return { subAdmin };
+    }
+
+    // Get Sub-Admin status and role history
+    async getSubAdminHistory(subAdminCode) {
+        const subAdmin = await SubAdmin.findOne({
+            sub_admin_code: subAdminCode,
+            is_deleted: { $ne: true }
+        })
+            .select('status_history role_history')
+            .populate('status_history.changed_by', 'email first_name last_name')
+            .lean();
+
+        if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
+        return subAdmin;
+    }
+
+
+
+
+
+
+
+
     // ============ REVIEW MANAGEMENT SERVICE ============
 
     // Get All Reviews (with filters)
@@ -1293,7 +2259,7 @@ class AdminService {
         sortBy = 'created_at',
         sortOrder = 'desc',
     }) {
-        
+
         const query = { deleted_at: null };
 
         if (status && status !== 'all') query.status = status;
