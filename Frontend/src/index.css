@@ -186,3 +186,23 @@ input[type="date"]::-moz-calendar-picker-indicator {
     padding: 4px;
     cursor: pointer;
 }
+
+/* Date Icon Proper Visible in Edit Employuee form  */
+/* Hide native calendar icon completely */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 44px;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Firefox me bhi hide karo */
+input[type="date"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}

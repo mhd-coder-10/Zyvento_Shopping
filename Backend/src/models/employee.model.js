@@ -1,29 +1,36 @@
-// Employee schema - Manages seller employees with multiple roles
-// Supports multiple designations and role assignments
+
+// Employee schema - Manages seller employees (seller's staff)
+// Distinct from Sub-Admin (which is Zyvento's own staff)
 // Related to: user.model.js, seller.model.js, role.model.js
 
 const mongoose = require("mongoose");
 
 const employee_schema = new mongoose.Schema(
 {
+    // ============ IDENTIFIERS ============
+    employee_code: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        uppercase: true,
+        index: true
+    },
+
     // ============ RELATIONSHIPS ============
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        required: true,
+        index: true
     },
 
-    // MULTIPLE SELLERS SUPPORT
-    seller_ids: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Seller"
-    }],
-
-    // LEGACY SUPPORT (Single seller ke liye)
+    // Single seller link (primary owner)
     seller_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Seller",
-        default: null
+        required: true,
+        index: true
     },
 
     created_by: {
@@ -32,67 +39,67 @@ const employee_schema = new mongoose.Schema(
         required: true
     },
 
-    // ============ MULTIPLE ROLES SUPPORT ============
+    // ============ DENORMALIZED (for fast list rendering) ============
+    full_name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+    mobile_number: { type: String, trim: true, default: null },
+
+    // ============ EMPLOYEE DETAILS ============
+    employee_type: {
+        type: String,
+        enum: [
+            "manager",
+            "product_manager",
+            "order_manager",
+            "inventory_manager",
+            "support_staff",
+            "account_manager"
+        ],
+        required: true,
+        index: true
+    },
+
+    designation: { type: String, trim: true, default: null },
+    department: { type: String, trim: true, default: null },
+
+    joining_date: { type: Date, default: null },
+
+    // ============ ROLES ============
     role_ids: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Role"
     }],
-    // ======================================
 
-    // ============ EMPLOYEE TYPE ============
-    employee_type: {
-        type: String,
-        enum: [
-        "manager",
-        "product_manager",
-        "order_manager",
-        "inventory_manager",
-        "support_staff",
-        "account_manager"
-    ],
-        required: true
-    },
-
-    // ============ MULTIPLE DESIGNATIONS ============
-    designations: [{
-        type: String,
-        trim: true
+    role_history: [{
+        role_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Role" }],
+        changed_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        changed_at: { type: Date, default: Date.now },
+        reason: String
     }],
-
-    department: {
-        type: String,
-        trim: true
-    },
-
-    departments: [{
-        type: String,
-        trim: true
-    }],
-
-    // ============ ROLE PERMISSIONS ============
-    role_permissions: [{
-        role_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Role"
-        },
-        is_active: { type: Boolean, default: true }
-    }],
-
-    // ============ EMPLOYMENT DETAILS ============
-    joining_date: {
-        type: Date
-    },
 
     // ============ STATUS ============
     status: {
         type: String,
-        enum: ["active", "inactive", "blocked", "pending"],
-        default: "pending"
+        enum: ["pending", "active", "inactive", "blocked"],
+        default: "pending",
+        index: true
     },
 
-    notes: {
-        type: String
-    }
+    status_history: [{
+        from: { type: String },
+        to: { type: String, required: true },
+        changed_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        reason: { type: String, default: '' },
+        notes: { type: String, default: '' },
+        changed_at: { type: Date, default: Date.now }
+    }],
+
+    notes: { type: String, default: '' },
+
+    // ============ SOFT DELETE ============
+    is_deleted: { type: Boolean, default: false, index: true },
+    deleted_at: { type: Date, default: null },
+    deleted_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
 },
 {
     timestamps: {
@@ -103,10 +110,9 @@ const employee_schema = new mongoose.Schema(
 );
 
 // ============ INDEXES ============
-employee_schema.index({ user_id: 1 });
-employee_schema.index({ seller_ids: 1 });      // ✅ Multiple sellers index
+
 employee_schema.index({ seller_id: 1, status: 1 });
-employee_schema.index({ employee_type: 1 });
 employee_schema.index({ role_ids: 1 });
+employee_schema.index({ is_deleted: 1, status: 1, created_at: -1 });
 
 module.exports = mongoose.model("Employee", employee_schema);

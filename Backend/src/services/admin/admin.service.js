@@ -1275,424 +1275,6 @@ class AdminService {
         return csvRows.join('\n');
     }
 
-
-
-
-    // ============ SUB-ADMINS MANAGEMENT SERVICE ============
-
-    // Generate Sub Admin Code
-    // _generateSubAdminCode() {
-    //     const ts = Date.now().toString(36).toUpperCase();
-    //     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-    //     return `SUBA-${ts}${rand}`;
-    // }
-
-    // // Get All Sub-Admins (paginated + filters + view switching)
-    // // view: 'active' (default) | 'deleted'
-    // async getAllSubAdmins(query = {}) {
-    //     const {
-    //         page = 1,
-    //         limit = 10,
-    //         search = '',
-    //         sub_admin_type = 'all',
-    //         status = 'all',
-    //         department = 'all',
-    //         view = 'active',
-    //         sort_by = 'created_at',
-    //         sort_order = 'desc',
-    //         start_date,
-    //         end_date
-    //     } = query;
-
-    //     // 👇 View-based filter — safe with $ne for legacy data
-    //     const filter = view === 'deleted'
-    //         ? { is_deleted: true }
-    //         : { is_deleted: { $ne: true } };
-
-    //     if (sub_admin_type !== 'all') filter.sub_admin_type = sub_admin_type;
-    //     if (status !== 'all') filter.status = status;
-    //     if (department !== 'all') filter.department = department;
-
-    //     if (search) {
-    //         filter.$or = [
-    //             { sub_admin_code: { $regex: search, $options: 'i' } },
-    //             { full_name: { $regex: search, $options: 'i' } },
-    //             { email: { $regex: search, $options: 'i' } },
-    //             { department: { $regex: search, $options: 'i' } }
-    //         ];
-    //     }
-
-    //     if (start_date || end_date) {
-    //         filter.created_at = {};
-    //         if (start_date) filter.created_at.$gte = new Date(start_date);
-    //         if (end_date) filter.created_at.$lte = new Date(end_date);
-    //     }
-
-    //     const skip = (page - 1) * limit;
-    //     const sort = { [sort_by]: sort_order === 'asc' ? 1 : -1 };
-
-    //     const [subAdmins, total] = await Promise.all([
-    //         SubAdmin.find(filter)
-    //             .populate('user_id', 'profile_image email mobile_number')
-    //             .populate('current_role_ids', 'name display_name')
-    //             .sort(sort)
-    //             .skip(skip)
-    //             .limit(Number(limit))
-    //             .lean(),
-    //         SubAdmin.countDocuments(filter)
-    //     ]);
-
-    //     return {
-    //         sub_admins: subAdmins,
-    //         pagination: {
-    //             total,
-    //             page: Number(page),
-    //             limit: Number(limit),
-    //             total_pages: Math.ceil(total / limit)
-    //         }
-    //     };
-    // }
-
-    // // Get Subadmin by code
-    // async getSubAdminByCode(subAdminCode) {
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: { $ne: true }
-    //     })
-    //         .populate('user_id', 'profile_image email mobile_number user_type')
-    //         .populate('current_role_ids', 'name display_name permissions')
-    //         .populate('assigned_by', 'email')
-    //         .populate('suspended_by', 'email')
-    //         .populate('status_history.changed_by', 'email')
-    //         .lean();
-
-    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
-    //     return { subAdmin };
-    // }
-
-    // // Get Sub Admin State
-    // async getSubAdminStats() {
-    //     const baseFilter = { is_deleted: { $ne: true } };
-    //     const [total, active, pending, suspended, inactive, deletedCount] = await Promise.all([
-    //         SubAdmin.countDocuments(baseFilter),
-    //         SubAdmin.countDocuments({ ...baseFilter, status: 'active' }),
-    //         SubAdmin.countDocuments({ ...baseFilter, status: 'pending' }),
-    //         SubAdmin.countDocuments({ ...baseFilter, status: 'suspended' }),
-    //         SubAdmin.countDocuments({ ...baseFilter, status: 'inactive' }),
-    //         SubAdmin.countDocuments({ is_deleted: true })
-    //     ]);
-
-    //     const byType = await SubAdmin.aggregate([
-    //         { $match: { is_deleted: { $ne: true } } },
-    //         { $group: { _id: '$sub_admin_type', count: { $sum: 1 } } }
-    //     ]);
-
-    //     return {
-    //         total,
-    //         active,
-    //         pending,
-    //         suspended,
-    //         inactive,
-    //         deleted: deletedCount,
-    //         by_type: byType.reduce((acc, t) => {
-    //             acc[t._id] = t.count;
-    //             return acc;
-    //         }, {})
-    //     };
-    // }
-
-    // // Create Sub Admin
-    // async createSubAdmin(data, assignedByUserId) {
-    //     const { user_id, sub_admin_type, department, designation, notes, current_role_ids = [] } = data;
-
-    //     const user = await User.findById(user_id);
-    //     if (!user) throw ApiError.notFound('User not found');
-
-    //     const existing = await SubAdmin.findOne({ user_id, is_deleted: { $ne: true } });
-    //     if (existing) throw ApiError.badRequest('User is already a Sub-Admin');
-
-    //     if (current_role_ids.length > 0) {
-    //         const roleCount = await Role.countDocuments({ _id: { $in: current_role_ids } });
-    //         if (roleCount !== current_role_ids.length) {
-    //             throw ApiError.badRequest('One or more roles are invalid');
-    //         }
-    //     }
-
-    //     const subAdmin = await SubAdmin.create({
-    //         sub_admin_code: this._generateSubAdminCode(),
-    //         user_id,
-    //         assigned_by: assignedByUserId,
-    //         email: user.email,
-    //         full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
-    //         mobile_number: user.mobile_number || null,
-    //         sub_admin_type,
-    //         department,
-    //         designation: designation || null,
-    //         current_role_ids,
-    //         role_history: current_role_ids.length > 0
-    //             ? [{ role_ids: current_role_ids, assigned_by: assignedByUserId, reason: 'Initial assignment' }]
-    //             : [],
-    //         status: 'pending',
-    //         notes: notes || '',
-    //         status_history: [{
-    //             from: null,
-    //             to: 'pending',
-    //             changed_by: assignedByUserId,
-    //             reason: 'Sub-Admin created'
-    //         }]
-    //     });
-
-    //     return { subAdmin };
-    // }
-
-    // // Update Sub-admin Profile
-    // async updateSubAdmin(subAdminCode, data, updatedByUserId) {
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: { $ne: true }
-    //     });
-    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
-
-    //     const allowed = ['sub_admin_type', 'department', 'designation', 'notes', 'mobile_number', 'full_name'];
-    //     allowed.forEach((key) => {
-    //         if (data[key] !== undefined) subAdmin[key] = data[key];
-    //     });
-
-    //     if (Array.isArray(data.current_role_ids)) {
-    //         const roleCount = await Role.countDocuments({ _id: { $in: data.current_role_ids } });
-    //         if (roleCount !== data.current_role_ids.length) {
-    //             throw ApiError.badRequest('One or more roles are invalid');
-    //         }
-    //         subAdmin.current_role_ids = data.current_role_ids;
-    //         subAdmin.role_history.push({
-    //             role_ids: data.current_role_ids,
-    //             assigned_by: updatedByUserId,
-    //             assigned_at: new Date(),
-    //             reason: data.role_change_reason || 'Roles updated'
-    //         });
-    //     }
-
-    //     await subAdmin.save();
-
-    //     if (data.full_name || data.mobile_number) {
-    //         await User.updateOne(
-    //             { _id: subAdmin.user_id },
-    //             {
-    //                 $set: {
-    //                     ...(data.full_name && {
-    //                         first_name: data.full_name.split(' ')[0] || '',
-    //                         last_name: data.full_name.split(' ').slice(1).join(' ') || ''
-    //                     }),
-    //                     ...(data.mobile_number && { mobile_number: data.mobile_number })
-    //                 }
-    //             }
-    //         );
-    //     }
-
-    //     return { subAdmin };
-    // }
-
-    // // Update Status — with User account_status sync
-    // async updateSubAdminStatus(subAdminCode, { status, reason, notes }, changedByUserId) {
-    //     const ALLOWED_TRANSITIONS = {
-    //         pending: ['active', 'inactive'],
-    //         active: ['inactive', 'suspended'],
-    //         inactive: ['active', 'suspended'],
-    //         suspended: ['active', 'inactive']
-    //     };
-
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: { $ne: true }
-    //     });
-    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
-
-    //     if (subAdmin.status === status) {
-    //         throw ApiError.badRequest(`Sub-Admin is already ${status}`);
-    //     }
-
-    //     const allowed = ALLOWED_TRANSITIONS[subAdmin.status] || [];
-    //     if (!allowed.includes(status)) {
-    //         throw ApiError.badRequest(
-    //             `Invalid transition: ${subAdmin.status} → ${status}. Allowed: ${allowed.join(', ')}`
-    //         );
-    //     }
-
-    //     if (status === 'suspended' && (!reason || !reason.trim())) {
-    //         throw ApiError.badRequest('Suspension reason is required');
-    //     }
-
-    //     const previousStatus = subAdmin.status;
-    //     subAdmin.status = status;
-
-    //     if (status === 'suspended') {
-    //         subAdmin.suspended_by = changedByUserId;
-    //         subAdmin.suspended_reason = reason;
-    //         subAdmin.suspended_at = new Date();
-    //     } else if (previousStatus === 'suspended') {
-    //         subAdmin.suspended_by = null;
-    //         subAdmin.suspended_reason = null;
-    //         subAdmin.suspended_at = null;
-    //     }
-
-    //     subAdmin.status_history.push({
-    //         from: previousStatus,
-    //         to: status,
-    //         changed_by: changedByUserId,
-    //         reason: reason || '',
-    //         notes: notes || '',
-    //         changed_at: new Date()
-    //     });
-
-    //     await subAdmin.save();
-
-    //     // Sync User account_status
-    //     const userStatusMap = {
-    //         active: 'active',
-    //         inactive: 'inactive',
-    //         suspended: 'blocked',
-    //         pending: 'pending'
-    //     };
-    //     await User.updateOne(
-    //         { _id: subAdmin.user_id },
-    //         { $set: { account_status: userStatusMap[status] || 'pending' } }
-    //     );
-
-    //     return { subAdmin };
-    // }
-
-    // // Soft Delete Sub-Admin — Blocks login + hides from list
-    // async deleteSubAdmin(subAdminCode, deletedByUserId) {
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: { $ne: true }
-    //     });
-    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
-
-    //     subAdmin.is_deleted = true;
-    //     subAdmin.deleted_at = new Date();
-    //     subAdmin.deleted_by = deletedByUserId;
-
-    //     subAdmin.status_history.push({
-    //         from: subAdmin.status,
-    //         to: 'deleted',
-    //         changed_by: deletedByUserId,
-    //         reason: 'Sub-Admin deleted by admin',
-    //         changed_at: new Date()
-    //     });
-
-    //     await subAdmin.save();
-
-    //     // Block linked user account — login pe access nahi milega
-    //     await User.updateOne(
-    //         { _id: subAdmin.user_id },
-    //         { $set: { account_status: 'deleted' } }
-    //     );
-
-    //     return { subAdmin };
-    // }
-
-    // // Get Deleted Sub-Admins (for Deleted tab)
-    // async getDeletedSubAdmins(query = {}) {
-    //     const {
-    //         page = 1,
-    //         limit = 10,
-    //         search = '',
-    //         sub_admin_type = 'all',
-    //         sort_by = 'deleted_at',
-    //         sort_order = 'desc'
-    //     } = query;
-
-    //     const filter = { is_deleted: true };
-
-    //     if (sub_admin_type !== 'all') filter.sub_admin_type = sub_admin_type;
-
-    //     if (search) {
-    //         filter.$or = [
-    //             { sub_admin_code: { $regex: search, $options: 'i' } },
-    //             { full_name: { $regex: search, $options: 'i' } },
-    //             { email: { $regex: search, $options: 'i' } }
-    //         ];
-    //     }
-
-    //     const skip = (page - 1) * limit;
-    //     const sort = { [sort_by]: sort_order === 'asc' ? 1 : -1 };
-
-    //     const [subAdmins, total] = await Promise.all([
-    //         SubAdmin.find(filter)
-    //             .populate('deleted_by', 'email first_name last_name')
-    //             .sort(sort)
-    //             .skip(skip)
-    //             .limit(Number(limit))
-    //             .lean(),
-    //         SubAdmin.countDocuments(filter)
-    //     ]);
-
-    //     return {
-    //         sub_admins: subAdmins,
-    //         pagination: {
-    //             total,
-    //             page: Number(page),
-    //             limit: Number(limit),
-    //             total_pages: Math.ceil(total / limit)
-    //         }
-    //     };
-    // }
-
-    // // Restore Sub-Admin — Bring back with previous status
-    // async restoreSubAdmin(subAdminCode, restoredByUserId) {
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: true
-    //     });
-    //     if (!subAdmin) throw ApiError.notFound('Deleted Sub-Admin not found');
-
-    //     // Restore to INACTIVE state — manager explicitly activate karega
-    //     // (Safety: agar status active tha, tab bhi restore karte waqt inactive rakho)
-    //     const restoreStatus = subAdmin.status === 'active' ? 'inactive' : subAdmin.status;
-
-    //     subAdmin.is_deleted = false;
-    //     subAdmin.deleted_at = null;
-    //     subAdmin.deleted_by = null;
-    //     subAdmin.status = restoreStatus;
-
-    //     subAdmin.status_history.push({
-    //         from: 'deleted',
-    //         to: restoreStatus,
-    //         changed_by: restoredByUserId,
-    //         reason: 'Sub-Admin restored by admin',
-    //         notes: 'Restored to inactive — activate manually after review',
-    //         changed_at: new Date()
-    //     });
-
-    //     await subAdmin.save();
-
-    //     // Sync User account_status — inactive so login works but no dashboard access
-    //     await User.updateOne(
-    //         { _id: subAdmin.user_id },
-    //         { $set: { account_status: 'inactive' } }
-    //     );
-
-    //     return { subAdmin };
-    // }
-
-    // // Get History
-    // async getSubAdminHistory(subAdminCode) {
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: { $ne: true }
-    //     })
-    //         .select('status_history role_history')
-    //         .populate('status_history.changed_by', 'email first_name last_name')
-    //         .lean();
-
-    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
-    //     return subAdmin;
-    // }
-
-
-
-
     // ============ SUB-ADMIN MANAGEMENT SERVICE ============
 
     // Generate unique Sub-Admin code
@@ -1862,7 +1444,6 @@ class AdminService {
     }
 
     // Update Sub-Admin profile
-    // Update Sub-Admin profile
     async updateSubAdmin(subAdminCode, data, updatedByUserId) {
         const subAdmin = await SubAdmin.findOne({
             sub_admin_code: subAdminCode,
@@ -1913,85 +1494,6 @@ class AdminService {
 
         return { subAdmin };
     }
-
-    // Update Sub-Admin status (with User account_status sync)
-    // async updateSubAdminStatus(subAdminCode, { status, reason, notes }, changedByUserId) {
-    //     const ALLOWED_TRANSITIONS = {
-    //         pending: ['active', 'inactive'],
-    //         active: ['inactive', 'suspended'],
-    //         inactive: ['active', 'suspended'],
-    //         suspended: ['active', 'inactive']
-    //     };
-
-    //     const subAdmin = await SubAdmin.findOne({
-    //         sub_admin_code: subAdminCode,
-    //         is_deleted: { $ne: true }
-    //     });
-    //     if (!subAdmin) throw ApiError.notFound('Sub-Admin not found');
-
-    //     if (subAdmin.status === status) {
-    //         throw ApiError.badRequest(`Sub-Admin is already ${status}`);
-    //     }
-
-    //     const allowed = ALLOWED_TRANSITIONS[subAdmin.status] || [];
-    //     if (!allowed.includes(status)) {
-    //         throw ApiError.badRequest(
-    //             `Invalid transition: ${subAdmin.status} → ${status}. Allowed: ${allowed.join(', ')}`
-    //         );
-    //     }
-
-    //     if (status === 'suspended' && (!reason || !reason.trim())) {
-    //         throw ApiError.badRequest('Suspension reason is required');
-    //     }
-
-    //     const previousStatus = subAdmin.status;
-
-    //     // Build update payload (only status-related fields)
-    //     const statusHistoryEntry = {
-    //         from: previousStatus,
-    //         to: status,
-    //         changed_by: changedByUserId,
-    //         reason: reason || '',
-    //         notes: notes || '',
-    //         changed_at: new Date()
-    //     };
-
-    //     const updatePayload = {
-    //         status,
-    //         $push: { status_history: statusHistoryEntry }
-    //     };
-
-    //     if (status === 'suspended') {
-    //         updatePayload.suspended_by = changedByUserId;
-    //         updatePayload.suspended_reason = reason;
-    //         updatePayload.suspended_at = new Date();
-    //     } else if (previousStatus === 'suspended') {
-    //         updatePayload.suspended_by = null;
-    //         updatePayload.suspended_reason = null;
-    //         updatePayload.suspended_at = null;
-    //     }
-
-    //     // 👇 Use findOneAndUpdate to only touch status-related fields
-    //     const updated = await SubAdmin.findOneAndUpdate(
-    //         { _id: subAdmin._id },
-    //         updatePayload,
-    //         { new: true }
-    //     );
-
-    //     // Sync User account_status
-    //     const userStatusMap = {
-    //         active: 'active',
-    //         inactive: 'inactive',
-    //         suspended: 'blocked',
-    //         pending: 'pending'
-    //     };
-    //     await User.updateOne(
-    //         { _id: subAdmin.user_id },
-    //         { $set: { account_status: userStatusMap[status] || 'pending' } }
-    //     );
-
-    //     return { subAdmin: updated };
-    // }
 
     // Update Sub-Admin status (with User account_status sync)
     async updateSubAdminStatus(subAdminCode, { status, reason, notes }, changedByUserId) {
@@ -2387,443 +1889,874 @@ class AdminService {
     // ============ EMPLOYEE MANAGEMENT  ============
 
     // Get Employee Stats
+    // async getEmployeeStats() {
+    //     const [total, active, inactive, blocked, pending] = await Promise.all([
+    //         Employee.countDocuments(),
+    //         Employee.countDocuments({ status: 'active' }),
+    //         Employee.countDocuments({ status: 'inactive' }),
+    //         Employee.countDocuments({ status: 'blocked' }),
+    //         Employee.countDocuments({ status: 'pending' }),
+    //     ]);
+    //     return { total, active, inactive, blocked, pending };
+    // }
+
+    // // Get All Employees
+    // async getAllEmployees({ page = 1, limit = 10, search = null, status = null, sortBy = 'created_at', sortOrder = 'desc' } = {}) {
+    //     const query = {};
+    //     if (status) query.status = status;
+
+    //     // Search - Only Employee collection fields 
+    //     if (search) {
+    //         const regex = new RegExp(search, 'i');
+    //         query.$or = [
+    //             { employee_code: regex },
+    //             { employee_type: regex },
+    //         ];
+    //     }
+
+    //     const sortOptions = {};
+    //     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    //     const [employees, total] = await Promise.all([
+    //         Employee.find(query)
+    //             .populate('user_id', 'first_name last_name email mobile_number profile_image')
+    //             .populate('seller_id', 'business_name')
+    //             .populate('role_ids', 'name')
+    //             .skip((page - 1) * limit)
+    //             .limit(parseInt(limit))
+    //             .sort(sortOptions),
+    //         Employee.countDocuments(query)
+    //     ]);
+
+    //     // Response structure - data array direct
+    //     return {
+    //         employees,
+    //         pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) }
+    //     };
+    // }
+
+    // // Create Employee (With Auto Employee Code)
+    // async createEmployee(employeeData, adminId) {
+    //     const { user_id, seller_ids, seller_id, employee_type, role_ids, designations, department, joining_date, status, first_name, last_name, email, mobile_number, password } = employeeData;
+
+    //     let user = null;
+    //     if (user_id) {
+    //         user = await User.findById(user_id);
+    //         if (!user) throw ApiError.notFound('User not found');
+    //         // Check if already an employee
+    //         const existingEmp = await Employee.findOne({ user_id });
+    //         if (existingEmp) throw ApiError.conflict('User is already an employee');
+    //     } else {
+    //         // Create new user
+    //         if (!first_name || !last_name || !email || !mobile_number || !password) {
+    //             throw ApiError.validation('Missing required fields for user creation');
+    //         }
+    //         user = new User({
+    //             first_name, last_name, email, mobile_number, password,
+    //             user_type: 'seller_employee'
+    //         });
+    //         await user.save();
+    //     }
+
+    //     // Generate employee code
+    //     const employeeCode = await this.generateEmployeeCode(user.first_name, user.last_name);
+
+    //     const employee = new Employee({
+    //         user_id: user._id,
+    //         employee_code: employeeCode,
+    //         seller_ids: seller_ids || [],
+    //         seller_id: seller_id || null,
+    //         created_by: adminId,
+    //         employee_type,
+    //         role_ids: role_ids || [],
+    //         designations: designations || [],
+    //         department,
+    //         joining_date: joining_date || new Date(),
+    //         status: status || 'active'
+    //     });
+
+    //     await employee.save();
+
+    //     // Update user type
+    //     await User.findByIdAndUpdate(user._id, { user_type: 'seller_employee', employee_id: employee._id });
+
+    //     // Log activity
+    //     await EmployeeActivityLog.create({
+    //         employee_id: employee._id,
+    //         performed_by: adminId,
+    //         action: 'create',
+    //         module_name: 'employee',
+    //         description: `Employee created with code ${employeeCode}`,
+    //         new_data: { employee_type, seller_ids: seller_ids || [] }
+    //     });
+
+    //     return employee.populate('user_id', 'first_name last_name email mobile_number').populate('seller_id', 'business_name');
+    // }
+
+    // // Generate Employee Code
+    // async generateEmployeeCode(firstName, lastName) {
+    //     const baseName = (firstName || 'employee').toLowerCase().replace(/[^a-z0-9]/g, '');
+    //     let code = '';
+    //     let isUnique = false;
+    //     while (!isUnique) {
+    //         const randomNum = Math.floor(1000 + Math.random() * 9000);
+    //         code = `${baseName}${randomNum}`;
+    //         const existing = await Employee.findOne({ employee_code: code });
+    //         if (!existing) isUnique = true;
+    //     }
+    //     return code;
+    // }
+
+    // // Get Employee by ID
+    // async getEmployeeById(employeeId) {
+    //     const employee = await Employee.findById(employeeId)
+    //         .populate('user_id', 'first_name last_name email mobile_number profile_image')
+    //         .populate('seller_ids', 'business_name owner_name email')
+    //         .populate('seller_id', 'business_name owner_name email')
+    //         .populate('role_ids', 'name permissions')
+    //         .populate('created_by', 'first_name last_name email');
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+    //     return employee;
+    // }
+
+    // // Update Employee
+    // async updateEmployee(employeeId, updateData, adminId) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+
+    //     const allowedFields = ['employee_type', 'seller_ids', 'seller_id', 'role_ids', 'designations', 'department', 'joining_date', 'notes', 'status'];
+    //     const filteredData = {};
+    //     for (const field of allowedFields) {
+    //         if (updateData[field] !== undefined) filteredData[field] = updateData[field];
+    //     }
+
+    //     // If seller changed, log to history
+    //     if (filteredData.seller_id && filteredData.seller_id.toString() !== employee.seller_id?.toString()) {
+    //         await EmployeeRoleHistory.create({
+    //             employee_id: employee._id,
+    //             old_role_ids: employee.role_ids,
+    //             new_role_ids: filteredData.role_ids || employee.role_ids,
+    //             changed_by: adminId,
+    //             change_reason: 'Seller changed'
+    //         });
+    //     }
+
+    //     Object.assign(employee, filteredData);
+    //     await employee.save();
+
+    //     // Log activity
+    //     await EmployeeActivityLog.create({
+    //         employee_id: employee._id,
+    //         performed_by: adminId,
+    //         action: 'update',
+    //         module_name: 'employee',
+    //         description: 'Employee updated',
+    //         old_data: employee._doc,
+    //         new_data: filteredData
+    //     });
+
+    //     return employee.populate('user_id', 'first_name last_name email mobile_number').populate('seller_id', 'business_name');
+    // }
+
+    // // Delete Employee
+    // async deleteEmployee(employeeId, adminId) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+
+    //     // Delete related logs
+    //     await EmployeeActivityLog.deleteMany({ employee_id: employeeId });
+    //     await EmployeePermission.deleteMany({ employee_id: employeeId });
+    //     await EmployeeRoleHistory.deleteMany({ employee_id: employeeId });
+
+    //     // Update user
+    //     await User.findByIdAndUpdate(employee.user_id, { user_type: 'customer', employee_id: null, seller_id: null });
+    //     await employee.deleteOne();
+
+    //     return { message: 'Employee deleted successfully' };
+    // }
+
+    // //  Update Employee Status
+    // async updateEmployeeStatus(employeeId, status, reason = null, adminId) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+
+    //     employee.status = status;
+    //     if (reason) employee.notes = reason;
+    //     await employee.save();
+
+    //     // Update user status
+    //     const userStatus = status === 'active' ? 'active' : status === 'inactive' ? 'inactive' : status === 'blocked' ? 'blocked' : 'pending';
+    //     await User.findByIdAndUpdate(employee.user_id, { account_status: userStatus });
+
+    //     // Log activity
+    //     await EmployeeActivityLog.create({
+    //         employee_id: employee._id,
+    //         performed_by: adminId,
+    //         action: 'status_change',
+    //         module_name: 'employee',
+    //         description: `Status changed to ${status}`,
+    //         new_data: { status, reason }
+    //     });
+
+    //     return employee;
+    // }
+
+    // // Transfer Employee to Another Seller
+    // async transferEmployeeToSeller(employeeId, newSellerId, newRoleId = null, newPermissionIds = [], adminId) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+
+    //     const oldSellerId = employee.seller_id || employee.seller_ids[0];
+    //     const oldRoleIds = employee.role_ids;
+
+    //     employee.seller_id = newSellerId;
+    //     employee.seller_ids = [newSellerId];
+    //     if (newRoleId) employee.employee_type = newRoleId;
+    //     if (newPermissionIds.length > 0) employee.role_ids = newPermissionIds;
+    //     employee.updated_by = adminId;
+    //     await employee.save();
+
+    //     // Log seller transfer in history
+    //     await EmployeeRoleHistory.create({
+    //         employee_id: employee._id,
+    //         old_role_ids: oldRoleIds,
+    //         new_role_ids: employee.role_ids,
+    //         changed_by: adminId,
+    //         change_reason: 'Seller transfer'
+    //     });
+
+    //     // Log activity
+    //     await EmployeeActivityLog.create({
+    //         employee_id: employee._id,
+    //         performed_by: adminId,
+    //         action: 'transfer',
+    //         module_name: 'employee',
+    //         description: `Transferred from seller ${oldSellerId} to ${newSellerId}`,
+    //         old_data: { seller_id: oldSellerId },
+    //         new_data: { seller_id: newSellerId, role_ids: employee.role_ids }
+    //     });
+
+    //     return employee.populate('user_id', 'first_name last_name email').populate('seller_id', 'business_name');
+    // }
+
+    // // Export Employees to CSV
+    // async exportEmployees({ search = null, status = null } = {}) {
+    //     const query = {};
+    //     if (status) query.status = status;
+    //     if (search) {
+    //         query.$or = [
+    //             { employee_code: new RegExp(search, 'i') },
+    //             { 'user_id.first_name': new RegExp(search, 'i') },
+    //             { 'user_id.last_name': new RegExp(search, 'i') },
+    //             { 'user_id.email': new RegExp(search, 'i') },
+    //         ];
+    //     }
+
+    //     const employees = await Employee.find(query).populate('user_id', 'first_name last_name email mobile_number').lean();
+    //     const headers = ['Employee Code', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Joined'];
+    //     const csvRows = [headers.join(',')];
+    //     employees.forEach(emp => {
+    //         const row = [
+    //             `"${(emp.employee_code || '').replace(/"/g, '""')}"`,
+    //             `"${(emp.user_id?.first_name || emp.first_name || '').replace(/"/g, '""')} ${(emp.user_id?.last_name || emp.last_name || '').replace(/"/g, '""')}"`,
+    //             `"${(emp.user_id?.email || emp.email || '').replace(/"/g, '""')}"`,
+    //             `"${(emp.user_id?.mobile_number || emp.mobile_number || '').replace(/"/g, '""')}"`,
+    //             `"${(emp.employee_type || '').replace(/"/g, '""')}"`,
+    //             `"${(emp.status || '').replace(/"/g, '""')}"`,
+    //             `"${emp.joining_date ? new Date(emp.joining_date).toLocaleDateString('en-IN') : ''}"`
+    //         ];
+    //         csvRows.push(row.join(','));
+    //     });
+    //     return csvRows.join('\n');
+    // }
+
+    // // Upload Employee Profile Image
+    // async uploadEmployeeProfileImage(employeeId, file) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+    //     if (file) {
+    //         const result = await cloudinaryHelper.uploadFile(file.path, { folder: `employees/${employeeId}/profile`, resource_type: 'image' });
+    //         employee.profile_image = result.url;
+    //         await employee.save();
+    //     }
+    //     return employee;
+    // }
+
+    // // Get Employee Performance
+    // async getEmployeePerformance(employeeId, period = 'monthly') {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+
+    //     const now = new Date();
+    //     let startDate;
+    //     if (period === 'weekly') startDate = new Date(now.setDate(now.getDate() - 7));
+    //     else if (period === 'yearly') startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+    //     else startDate = new Date(now.setMonth(now.getMonth() - 1));
+
+    //     // only order count 
+    //     const orderCount = await Order.countDocuments({
+    //         processed_by: employeeId,
+    //         created_at: { $gte: startDate }
+    //     });
+
+    //     // count action fro activity schema
+    //     const activityCount = await EmployeeActivityLog.countDocuments({
+    //         employee_id: employeeId,
+    //         created_at: { $gte: startDate }
+    //     });
+
+    //     return {
+    //         period,
+    //         total_orders: orderCount,
+    //         total_products: 0, // Agar Product model mein created_by hai toh use karo
+    //         total_activities: activityCount,
+    //         efficiency_score: 78, // Calculate based on your logic
+    //     };
+    // }
+
+    // // Get Employee Transactions
+    // async getEmployeeTransactions(employeeId, { page = 1, limit = 10 } = {}) {
+    //     const [transactions, total] = await Promise.all([
+    //         Transaction.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
+    //         Transaction.countDocuments({ employee_id: employeeId })
+    //     ]);
+    //     return { transactions, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
+    // }
+
+    // // Get Employee Sellers (Current & Past)
+    // async getEmployeeSellers(employeeId) {
+    //     const employee = await Employee.findById(employeeId).populate('seller_ids', 'business_name owner_name email').populate('seller_id', 'business_name owner_name email');
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+    //     return { current_sellers: employee.seller_ids || (employee.seller_id ? [employee.seller_id] : []), past_sellers: [] };
+    // }
+
+    // // Get Employee Career History
+    // async getEmployeeCareerHistory(employeeId, { page = 1, limit = 10 } = {}) {
+    //     const [history, total] = await Promise.all([
+    //         EmployeeRoleHistory.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
+    //         EmployeeRoleHistory.countDocuments({ employee_id: employeeId })
+    //     ]);
+    //     return { history, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
+    // }
+
+    // // Get Employee Reports (Filter by Month/Year)
+    // async getEmployeeReports(employeeId, { month, year, type = 'monthly' } = {}) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+
+    //     let startDate, endDate;
+    //     if (month && year) {
+    //         startDate = new Date(year, month - 1, 1);
+    //         endDate = new Date(year, month, 1);
+    //     } else if (year) {
+    //         startDate = new Date(year, 0, 1);
+    //         endDate = new Date(year + 1, 0, 1);
+    //     } else {
+    //         const now = new Date();
+    //         if (type === 'yearly') startDate = new Date(now.getFullYear(), 0, 1);
+    //         else startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    //         endDate = new Date();
+    //     }
+
+    //     const orders = await Order.countDocuments({
+    //         processed_by: employeeId,
+    //         created_at: { $gte: startDate, $lte: endDate }
+    //     });
+
+    //     const activities = await EmployeeActivityLog.countDocuments({
+    //         employee_id: employeeId,
+    //         created_at: { $gte: startDate, $lte: endDate }
+    //     });
+
+    //     return {
+    //         period: { startDate, endDate },
+    //         total_orders: orders,
+    //         total_activities: activities,
+    //     };
+    // }
+
+    // // Get Employee Roles
+    // async getEmployeeRoles(employeeId) {
+    //     const employee = await Employee.findById(employeeId).populate('role_ids', 'name permissions');
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+    //     return employee.role_ids;
+    // }
+
+    // // Assign Role to Employee
+    // async assignEmployeeRole(employeeId, roleIds, adminId) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+    //     employee.role_ids = roleIds || [];
+    //     await employee.save();
+
+    //     await EmployeeRoleHistory.create({
+    //         employee_id: employee._id,
+    //         old_role_ids: employee.role_ids,
+    //         new_role_ids: roleIds || [],
+    //         changed_by: adminId,
+    //         change_reason: 'Role assigned'
+    //     });
+
+    //     return employee.populate('role_ids', 'name');
+    // }
+
+    // // Remove Role from Employee
+    // async removeEmployeeRole(employeeId, roleId, adminId) {
+    //     const employee = await Employee.findById(employeeId);
+    //     if (!employee) throw ApiError.notFound('Employee not found');
+    //     employee.role_ids = employee.role_ids.filter(r => r.toString() !== roleId);
+    //     await employee.save();
+
+    //     await EmployeeRoleHistory.create({
+    //         employee_id: employee._id,
+    //         old_role_ids: employee.role_ids,
+    //         new_role_ids: employee.role_ids,
+    //         changed_by: adminId,
+    //         change_reason: 'Role removed'
+    //     });
+
+    //     return employee.populate('role_ids', 'name');
+    // }
+
+    // // Get Employee Activity Logs
+    // async getEmployeeActivityLogs(employeeId, { page = 1, limit = 20 } = {}) {
+    //     const [logs, total] = await Promise.all([
+    //         EmployeeActivityLog.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
+    //         EmployeeActivityLog.countDocuments({ employee_id: employeeId })
+    //     ]);
+    //     return { logs, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
+    // }
+
+
+    // =================== EMPLOYEE SERVICE =================
+    // Helper: Generate Employee Code 
+    _generateEmployeeCode() {
+        const ts = Date.now().toString(36).toUpperCase();
+        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+        return `EMP-${ts}${rand}`;
+    }
+
+    // Get Employee Stats 
     async getEmployeeStats() {
-        const [total, active, inactive, blocked, pending] = await Promise.all([
-            Employee.countDocuments(),
-            Employee.countDocuments({ status: 'active' }),
-            Employee.countDocuments({ status: 'inactive' }),
-            Employee.countDocuments({ status: 'blocked' }),
-            Employee.countDocuments({ status: 'pending' }),
+        const base = { is_deleted: { $ne: true } };
+        const [total, active, inactive, blocked, pending, deletedCount] = await Promise.all([
+            Employee.countDocuments(base),
+            Employee.countDocuments({ ...base, status: 'active' }),
+            Employee.countDocuments({ ...base, status: 'inactive' }),
+            Employee.countDocuments({ ...base, status: 'blocked' }),
+            Employee.countDocuments({ ...base, status: 'pending' }),
+            Employee.countDocuments({ is_deleted: true })
         ]);
-        return { total, active, inactive, blocked, pending };
+
+        const byType = await Employee.aggregate([
+            { $match: { is_deleted: { $ne: true } } },
+            { $group: { _id: '$employee_type', count: { $sum: 1 } } }
+        ]);
+
+        return {
+            total, active, inactive, blocked, pending,
+            deleted: deletedCount,
+            by_type: byType.reduce((acc, t) => { acc[t._id] = t.count; return acc; }, {})
+        };
     }
 
     // Get All Employees
-    async getAllEmployees({ page = 1, limit = 10, search = null, status = null, sortBy = 'created_at', sortOrder = 'desc' } = {}) {
-        const query = {};
-        if (status) query.status = status;
+    async getAllEmployees(query = {}) {
+        const {
+            page = 1, limit = 10,
+            search = '', status = 'all', employee_type = 'all',
+            seller_id = 'all', view = 'active',
+            sort_by = 'created_at', sort_order = 'desc',
+            start_date, end_date
+        } = query;
 
-        // Search - Only Employee collection fields 
+        const filter = view === 'deleted'
+            ? { is_deleted: true }
+            : { is_deleted: { $ne: true } };
+
+        if (status !== 'all') filter.status = status;
+        if (employee_type !== 'all') filter.employee_type = employee_type;
+        if (seller_id !== 'all') filter.seller_id = seller_id;
+
         if (search) {
-            const regex = new RegExp(search, 'i');
-            query.$or = [
-                { employee_code: regex },
-                { employee_type: regex },
+            filter.$or = [
+                { employee_code: { $regex: search, $options: 'i' } },
+                { full_name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
             ];
         }
 
-        const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        if (start_date || end_date) {
+            filter.created_at = {};
+            if (start_date) filter.created_at.$gte = new Date(start_date);
+            if (end_date) filter.created_at.$lte = new Date(end_date);
+        }
+
+        const skip = (page - 1) * limit;
+        const sort = { [sort_by]: sort_order === 'asc' ? 1 : -1 };
 
         const [employees, total] = await Promise.all([
-            Employee.find(query)
-                .populate('user_id', 'first_name last_name email mobile_number profile_image')
-                .populate('seller_id', 'business_name')
-                .populate('role_ids', 'name')
-                .skip((page - 1) * limit)
-                .limit(parseInt(limit))
-                .sort(sortOptions),
-            Employee.countDocuments(query)
+            Employee.find(filter)
+                .populate('seller_id', 'business_name seller_code')
+                .populate('role_ids', 'name display_name')
+                .sort(sort).skip(skip).limit(Number(limit)).lean(),
+            Employee.countDocuments(filter)
         ]);
 
-        // Response structure - data array direct
         return {
             employees,
-            pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) }
+            pagination: {
+                total, page: Number(page), limit: Number(limit),
+                total_pages: Math.ceil(total / limit)
+            }
         };
     }
 
-    // Create Employee (With Auto Employee Code)
-    async createEmployee(employeeData, adminId) {
-        const { user_id, seller_ids, seller_id, employee_type, role_ids, designations, department, joining_date, status, first_name, last_name, email, mobile_number, password } = employeeData;
+    // Get available users for employee creation (searchable email dropdown)
+    async getAvailableUsersForEmployee({ search = '', limit = 50 } = {}) {
+        const and = [
+            {
+                $or: [
+                    { employee_id: null },
+                    { employee_id: { $exists: false } }
+                ]
+            },
+            {
+                user_type: { $nin: ['super_admin', 'sub_admin', 'seller'] }
+            }
+        ];
 
-        let user = null;
+        if (search && search.trim()) {
+            const regex = new RegExp(search.trim(), 'i');
+            and.push({
+                $or: [
+                    { email: regex },
+                    { first_name: regex },
+                    { last_name: regex },
+                    { mobile_number: regex }
+                ]
+            });
+        }
+
+        const users = await User.find({ $and: and })
+            .select('_id first_name last_name email mobile_number user_type account_status')
+            .sort({ created_at: -1 })
+            .limit(Number(limit))
+            .lean();
+
+        return { users, total: users.length };
+    }
+
+    // Get Deleted Employees
+    async getDeletedEmployees(query = {}) {
+        return this.getAllEmployees({ ...query, view: 'deleted', sort_by: 'deleted_at' });
+    }
+
+    // Get Employee By Code
+    async getEmployeeByCode(employeeCode) {
+        const emp = await Employee.findOne({
+            employee_code: employeeCode,
+            is_deleted: { $ne: true }
+        })
+            .populate('seller_id', 'business_name seller_code owner_name email')
+            .populate('role_ids', 'name display_name permissions')
+            .populate('created_by', 'email')
+            .populate('status_history.changed_by', 'email')
+            .lean();
+
+        if (!emp) throw ApiError.notFound('Employee not found');
+        return { employee: emp };
+    }
+
+    // Create Employee
+    async createEmployee(data, adminId) {
+        const {
+            user_id, seller_id, employee_type,
+            designation, department, joining_date, notes,
+            current_role_ids = [],
+            // If creating a new User:
+            first_name, last_name, email, mobile_number, password
+        } = data;
+
+        let user;
         if (user_id) {
             user = await User.findById(user_id);
             if (!user) throw ApiError.notFound('User not found');
-            // Check if already an employee
-            const existingEmp = await Employee.findOne({ user_id });
-            if (existingEmp) throw ApiError.conflict('User is already an employee');
-        } else {
-            // Create new user
-            if (!first_name || !last_name || !email || !mobile_number || !password) {
-                throw ApiError.validation('Missing required fields for user creation');
-            }
-            user = new User({
-                first_name, last_name, email, mobile_number, password,
-                user_type: 'seller_employee'
+
+            const existing = await Employee.findOne({
+                user_id,
+                is_deleted: { $ne: true }
             });
-            await user.save();
+            if (existing) throw ApiError.badRequest('User is already an employee');
+        } else {
+            // Create new User
+            if (!first_name || !last_name || !email || !mobile_number || !password) {
+                throw ApiError.badRequest('Missing required user fields');
+            }
+            const existingUser = await User.findOne({ email: email.toLowerCase() });
+            if (existingUser) throw ApiError.badRequest('Email already registered');
+
+            user = await User.create({
+                first_name, last_name, email, mobile_number, password,
+                user_type: 'seller_employee',
+                account_status: 'active'
+            });
         }
 
-        // Generate employee code
-        const employeeCode = await this.generateEmployeeCode(user.first_name, user.last_name);
+        // Validate seller
+        const seller = await Seller.findById(seller_id);
+        if (!seller) throw ApiError.notFound('Seller not found');
 
-        const employee = new Employee({
+        // Validate roles
+        if (current_role_ids.length > 0) {
+            const roleCount = await Role.countDocuments({ _id: { $in: current_role_ids } });
+            if (roleCount !== current_role_ids.length) {
+                throw ApiError.badRequest('One or more roles are invalid');
+            }
+        }
+
+        const employee = await Employee.create({
+            employee_code: this._generateEmployeeCode(),
             user_id: user._id,
-            employee_code: employeeCode,
-            seller_ids: seller_ids || [],
-            seller_id: seller_id || null,
+            seller_id,
             created_by: adminId,
+            full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+            email: user.email,
+            mobile_number: user.mobile_number || null,
             employee_type,
-            role_ids: role_ids || [],
-            designations: designations || [],
-            department,
+            designation: designation || null,
+            department: department || null,
             joining_date: joining_date || new Date(),
-            status: status || 'active'
+            role_ids: current_role_ids,
+            role_history: current_role_ids.length > 0
+                ? [{ role_ids: current_role_ids, changed_by: adminId, reason: 'Initial assignment' }]
+                : [],
+            status: 'pending',
+            notes: notes || '',
+            status_history: [{
+                from: null, to: 'pending',
+                changed_by: adminId, reason: 'Employee created'
+            }]
         });
 
-        await employee.save();
+        // Update User link
+        await User.updateOne(
+            { _id: user._id },
+            { $set: { user_type: 'seller_employee', employee_id: employee._id, seller_id } }
+        );
 
-        // Update user type
-        await User.findByIdAndUpdate(user._id, { user_type: 'seller_employee', employee_id: employee._id });
-
-        // Log activity
-        await EmployeeActivityLog.create({
-            employee_id: employee._id,
-            performed_by: adminId,
-            action: 'create',
-            module_name: 'employee',
-            description: `Employee created with code ${employeeCode}`,
-            new_data: { employee_type, seller_ids: seller_ids || [] }
-        });
-
-        return employee.populate('user_id', 'first_name last_name email mobile_number').populate('seller_id', 'business_name');
-    }
-
-    // Generate Employee Code
-    async generateEmployeeCode(firstName, lastName) {
-        const baseName = (firstName || 'employee').toLowerCase().replace(/[^a-z0-9]/g, '');
-        let code = '';
-        let isUnique = false;
-        while (!isUnique) {
-            const randomNum = Math.floor(1000 + Math.random() * 9000);
-            code = `${baseName}${randomNum}`;
-            const existing = await Employee.findOne({ employee_code: code });
-            if (!existing) isUnique = true;
-        }
-        return code;
-    }
-
-    // Get Employee by ID
-    async getEmployeeById(employeeId) {
-        const employee = await Employee.findById(employeeId)
-            .populate('user_id', 'first_name last_name email mobile_number profile_image')
-            .populate('seller_ids', 'business_name owner_name email')
-            .populate('seller_id', 'business_name owner_name email')
-            .populate('role_ids', 'name permissions')
-            .populate('created_by', 'first_name last_name email');
-        if (!employee) throw ApiError.notFound('Employee not found');
-        return employee;
+        return { employee };
     }
 
     // Update Employee
-    async updateEmployee(employeeId, updateData, adminId) {
-        const employee = await Employee.findById(employeeId);
+    async updateEmployee(employeeCode, data, updatedByUserId) {
+        const employee = await Employee.findOne({
+            employee_code: employeeCode,
+            is_deleted: { $ne: true }
+        });
         if (!employee) throw ApiError.notFound('Employee not found');
 
-        const allowedFields = ['employee_type', 'seller_ids', 'seller_id', 'role_ids', 'designations', 'department', 'joining_date', 'notes', 'status'];
-        const filteredData = {};
-        for (const field of allowedFields) {
-            if (updateData[field] !== undefined) filteredData[field] = updateData[field];
+        const allowed = ['employee_type', 'designation', 'department', 'joining_date', 'notes', 'mobile_number', 'full_name'];
+        allowed.forEach((key) => {
+            const val = data[key];
+            if (val !== undefined && val !== null && String(val).trim() !== '') {
+                employee[key] = typeof val === 'string' ? val.trim() : val;
+            }
+        });
+
+        // Seller change
+        if (data.seller_id && String(data.seller_id) !== String(employee.seller_id)) {
+            const seller = await Seller.findById(data.seller_id);
+            if (!seller) throw ApiError.notFound('Seller not found');
+            employee.seller_id = data.seller_id;
         }
 
-        // If seller changed, log to history
-        if (filteredData.seller_id && filteredData.seller_id.toString() !== employee.seller_id?.toString()) {
-            await EmployeeRoleHistory.create({
-                employee_id: employee._id,
-                old_role_ids: employee.role_ids,
-                new_role_ids: filteredData.role_ids || employee.role_ids,
-                changed_by: adminId,
-                change_reason: 'Seller changed'
+        // Role update
+        if (Array.isArray(data.current_role_ids)) {
+            const roleCount = await Role.countDocuments({ _id: { $in: data.current_role_ids } });
+            if (roleCount !== data.current_role_ids.length) {
+                throw ApiError.badRequest('One or more roles are invalid');
+            }
+            employee.role_ids = data.current_role_ids;
+            employee.role_history.push({
+                role_ids: data.current_role_ids,
+                changed_by: updatedByUserId,
+                changed_at: new Date(),
+                reason: data.role_change_reason || 'Roles updated'
             });
         }
 
-        Object.assign(employee, filteredData);
         await employee.save();
 
-        // Log activity
-        await EmployeeActivityLog.create({
-            employee_id: employee._id,
-            performed_by: adminId,
-            action: 'update',
-            module_name: 'employee',
-            description: 'Employee updated',
-            old_data: employee._doc,
-            new_data: filteredData
-        });
-
-        return employee.populate('user_id', 'first_name last_name email mobile_number').populate('seller_id', 'business_name');
-    }
-
-    // Delete Employee
-    async deleteEmployee(employeeId, adminId) {
-        const employee = await Employee.findById(employeeId);
-        if (!employee) throw ApiError.notFound('Employee not found');
-
-        // Delete related logs
-        await EmployeeActivityLog.deleteMany({ employee_id: employeeId });
-        await EmployeePermission.deleteMany({ employee_id: employeeId });
-        await EmployeeRoleHistory.deleteMany({ employee_id: employeeId });
-
-        // Update user
-        await User.findByIdAndUpdate(employee.user_id, { user_type: 'customer', employee_id: null, seller_id: null });
-        await employee.deleteOne();
-
-        return { message: 'Employee deleted successfully' };
-    }
-
-    //  Update Employee Status
-    async updateEmployeeStatus(employeeId, status, reason = null, adminId) {
-        const employee = await Employee.findById(employeeId);
-        if (!employee) throw ApiError.notFound('Employee not found');
-
-        employee.status = status;
-        if (reason) employee.notes = reason;
-        await employee.save();
-
-        // Update user status
-        const userStatus = status === 'active' ? 'active' : status === 'inactive' ? 'inactive' : status === 'blocked' ? 'blocked' : 'pending';
-        await User.findByIdAndUpdate(employee.user_id, { account_status: userStatus });
-
-        // Log activity
-        await EmployeeActivityLog.create({
-            employee_id: employee._id,
-            performed_by: adminId,
-            action: 'status_change',
-            module_name: 'employee',
-            description: `Status changed to ${status}`,
-            new_data: { status, reason }
-        });
-
-        return employee;
-    }
-
-    // Transfer Employee to Another Seller
-    async transferEmployeeToSeller(employeeId, newSellerId, newRoleId = null, newPermissionIds = [], adminId) {
-        const employee = await Employee.findById(employeeId);
-        if (!employee) throw ApiError.notFound('Employee not found');
-
-        const oldSellerId = employee.seller_id || employee.seller_ids[0];
-        const oldRoleIds = employee.role_ids;
-
-        employee.seller_id = newSellerId;
-        employee.seller_ids = [newSellerId];
-        if (newRoleId) employee.employee_type = newRoleId;
-        if (newPermissionIds.length > 0) employee.role_ids = newPermissionIds;
-        employee.updated_by = adminId;
-        await employee.save();
-
-        // Log seller transfer in history
-        await EmployeeRoleHistory.create({
-            employee_id: employee._id,
-            old_role_ids: oldRoleIds,
-            new_role_ids: employee.role_ids,
-            changed_by: adminId,
-            change_reason: 'Seller transfer'
-        });
-
-        // Log activity
-        await EmployeeActivityLog.create({
-            employee_id: employee._id,
-            performed_by: adminId,
-            action: 'transfer',
-            module_name: 'employee',
-            description: `Transferred from seller ${oldSellerId} to ${newSellerId}`,
-            old_data: { seller_id: oldSellerId },
-            new_data: { seller_id: newSellerId, role_ids: employee.role_ids }
-        });
-
-        return employee.populate('user_id', 'first_name last_name email').populate('seller_id', 'business_name');
-    }
-
-    // Export Employees to CSV
-    async exportEmployees({ search = null, status = null } = {}) {
-        const query = {};
-        if (status) query.status = status;
-        if (search) {
-            query.$or = [
-                { employee_code: new RegExp(search, 'i') },
-                { 'user_id.first_name': new RegExp(search, 'i') },
-                { 'user_id.last_name': new RegExp(search, 'i') },
-                { 'user_id.email': new RegExp(search, 'i') },
-            ];
+        // Sync User denormalized fields
+        if (data.full_name || data.mobile_number || data.seller_id) {
+            await User.updateOne(
+                { _id: employee.user_id },
+                {
+                    $set: {
+                        ...(data.full_name && {
+                            first_name: data.full_name.split(' ')[0] || '',
+                            last_name: data.full_name.split(' ').slice(1).join(' ') || ''
+                        }),
+                        ...(data.mobile_number && { mobile_number: data.mobile_number }),
+                        ...(data.seller_id && { seller_id: data.seller_id })
+                    }
+                }
+            );
         }
 
-        const employees = await Employee.find(query).populate('user_id', 'first_name last_name email mobile_number').lean();
-        const headers = ['Employee Code', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Joined'];
-        const csvRows = [headers.join(',')];
-        employees.forEach(emp => {
-            const row = [
-                `"${(emp.employee_code || '').replace(/"/g, '""')}"`,
-                `"${(emp.user_id?.first_name || emp.first_name || '').replace(/"/g, '""')} ${(emp.user_id?.last_name || emp.last_name || '').replace(/"/g, '""')}"`,
-                `"${(emp.user_id?.email || emp.email || '').replace(/"/g, '""')}"`,
-                `"${(emp.user_id?.mobile_number || emp.mobile_number || '').replace(/"/g, '""')}"`,
-                `"${(emp.employee_type || '').replace(/"/g, '""')}"`,
-                `"${(emp.status || '').replace(/"/g, '""')}"`,
-                `"${emp.joining_date ? new Date(emp.joining_date).toLocaleDateString('en-IN') : ''}"`
-            ];
-            csvRows.push(row.join(','));
-        });
-        return csvRows.join('\n');
+        return { employee };
     }
 
-    // Upload Employee Profile Image
-    async uploadEmployeeProfileImage(employeeId, file) {
-        const employee = await Employee.findById(employeeId);
-        if (!employee) throw ApiError.notFound('Employee not found');
-        if (file) {
-            const result = await cloudinaryHelper.uploadFile(file.path, { folder: `employees/${employeeId}/profile`, resource_type: 'image' });
-            employee.profile_image = result.url;
-            await employee.save();
-        }
-        return employee;
-    }
-
-    // Get Employee Performance
-    async getEmployeePerformance(employeeId, period = 'monthly') {
-        const employee = await Employee.findById(employeeId);
-        if (!employee) throw ApiError.notFound('Employee not found');
-
-        const now = new Date();
-        let startDate;
-        if (period === 'weekly') startDate = new Date(now.setDate(now.getDate() - 7));
-        else if (period === 'yearly') startDate = new Date(now.setFullYear(now.getFullYear() - 1));
-        else startDate = new Date(now.setMonth(now.getMonth() - 1));
-
-        // only order count 
-        const orderCount = await Order.countDocuments({
-            processed_by: employeeId,
-            created_at: { $gte: startDate }
-        });
-
-        // count action fro activity schema
-        const activityCount = await EmployeeActivityLog.countDocuments({
-            employee_id: employeeId,
-            created_at: { $gte: startDate }
-        });
-
-        return {
-            period,
-            total_orders: orderCount,
-            total_products: 0, // Agar Product model mein created_by hai toh use karo
-            total_activities: activityCount,
-            efficiency_score: 78, // Calculate based on your logic
+    // Update Employee Status
+    async updateEmployeeStatus(employeeCode, { status, reason, notes }, changedByUserId) {
+        const ALLOWED_TRANSITIONS = {
+            pending: ['active', 'inactive'],
+            active: ['inactive', 'blocked'],
+            inactive: ['active', 'blocked'],
+            blocked: ['active', 'inactive']
         };
-    }
 
-    // Get Employee Transactions
-    async getEmployeeTransactions(employeeId, { page = 1, limit = 10 } = {}) {
-        const [transactions, total] = await Promise.all([
-            Transaction.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
-            Transaction.countDocuments({ employee_id: employeeId })
-        ]);
-        return { transactions, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
-    }
+        // 👇 findOne with employee_code — NOT findById
+        const employee = await Employee.findOne({
+            employee_code: employeeCode,
+            is_deleted: { $ne: true }
+        });
+        console.log("Employee : ", employee);
 
-    // Get Employee Sellers (Current & Past)
-    async getEmployeeSellers(employeeId) {
-        const employee = await Employee.findById(employeeId).populate('seller_ids', 'business_name owner_name email').populate('seller_id', 'business_name owner_name email');
-        if (!employee) throw ApiError.notFound('Employee not found');
-        return { current_sellers: employee.seller_ids || (employee.seller_id ? [employee.seller_id] : []), past_sellers: [] };
-    }
-
-    // Get Employee Career History
-    async getEmployeeCareerHistory(employeeId, { page = 1, limit = 10 } = {}) {
-        const [history, total] = await Promise.all([
-            EmployeeRoleHistory.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
-            EmployeeRoleHistory.countDocuments({ employee_id: employeeId })
-        ]);
-        return { history, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
-    }
-
-    // Get Employee Reports (Filter by Month/Year)
-    async getEmployeeReports(employeeId, { month, year, type = 'monthly' } = {}) {
-        const employee = await Employee.findById(employeeId);
         if (!employee) throw ApiError.notFound('Employee not found');
 
-        let startDate, endDate;
-        if (month && year) {
-            startDate = new Date(year, month - 1, 1);
-            endDate = new Date(year, month, 1);
-        } else if (year) {
-            startDate = new Date(year, 0, 1);
-            endDate = new Date(year + 1, 0, 1);
-        } else {
-            const now = new Date();
-            if (type === 'yearly') startDate = new Date(now.getFullYear(), 0, 1);
-            else startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            endDate = new Date();
+        if (employee.status === status) {
+            throw ApiError.badRequest(`Employee is already ${status}`);
         }
 
-        const orders = await Order.countDocuments({
-            processed_by: employeeId,
-            created_at: { $gte: startDate, $lte: endDate }
-        });
+        const allowed = ALLOWED_TRANSITIONS[employee.status] || [];
+        if (!allowed.includes(status)) {
+            throw ApiError.badRequest(
+                `Invalid transition: ${employee.status} → ${status}. Allowed: ${allowed.join(', ')}`
+            );
+        }
 
-        const activities = await EmployeeActivityLog.countDocuments({
-            employee_id: employeeId,
-            created_at: { $gte: startDate, $lte: endDate }
-        });
+        if (status === 'blocked' && (!reason || !reason.trim())) {
+            throw ApiError.badRequest('Block reason is required');
+        }
 
-        return {
-            period: { startDate, endDate },
-            total_orders: orders,
-            total_activities: activities,
+        const previousStatus = employee.status;
+
+        const updatePayload = {
+            status,
+            $push: {
+                status_history: {
+                    from: previousStatus,
+                    to: status,
+                    changed_by: changedByUserId,
+                    reason: reason || '',
+                    notes: notes || '',
+                    changed_at: new Date()
+                }
+            }
         };
+
+        const updated = await Employee.findOneAndUpdate(
+            { _id: employee._id },
+            updatePayload,
+            { new: true }
+        );
+
+        // Sync User account_status
+        const userStatusMap = {
+            active: 'active',
+            inactive: 'inactive',
+            blocked: 'blocked',
+            pending: 'pending'
+        };
+        await User.updateOne(
+            { _id: employee.user_id },
+            { $set: { account_status: userStatusMap[status] || 'pending' } }
+        );
+
+        return { employee: updated };
     }
 
-    // Get Employee Roles
-    async getEmployeeRoles(employeeId) {
-        const employee = await Employee.findById(employeeId).populate('role_ids', 'name permissions');
+    // Soft Delete
+    async deleteEmployee(employeeCode, deletedByUserId) {
+        const employee = await Employee.findOne({
+            employee_code: employeeCode,
+            is_deleted: { $ne: true }
+        });
         if (!employee) throw ApiError.notFound('Employee not found');
-        return employee.role_ids;
-    }
 
-    // Assign Role to Employee
-    async assignEmployeeRole(employeeId, roleIds, adminId) {
-        const employee = await Employee.findById(employeeId);
-        if (!employee) throw ApiError.notFound('Employee not found');
-        employee.role_ids = roleIds || [];
-        await employee.save();
-
-        await EmployeeRoleHistory.create({
-            employee_id: employee._id,
-            old_role_ids: employee.role_ids,
-            new_role_ids: roleIds || [],
-            changed_by: adminId,
-            change_reason: 'Role assigned'
+        employee.is_deleted = true;
+        employee.deleted_at = new Date();
+        employee.deleted_by = deletedByUserId;
+        employee.status_history.push({
+            from: employee.status, to: 'deleted',
+            changed_by: deletedByUserId, reason: 'Employee deleted by admin',
+            changed_at: new Date()
         });
 
-        return employee.populate('role_ids', 'name');
-    }
-
-    // Remove Role from Employee
-    async removeEmployeeRole(employeeId, roleId, adminId) {
-        const employee = await Employee.findById(employeeId);
-        if (!employee) throw ApiError.notFound('Employee not found');
-        employee.role_ids = employee.role_ids.filter(r => r.toString() !== roleId);
         await employee.save();
 
-        await EmployeeRoleHistory.create({
-            employee_id: employee._id,
-            old_role_ids: employee.role_ids,
-            new_role_ids: employee.role_ids,
-            changed_by: adminId,
-            change_reason: 'Role removed'
+        await User.updateOne(
+            { _id: employee.user_id },
+            { $set: { account_status: 'deleted' } }
+        );
+
+        return { employee };
+    }
+
+    // Restore Employee
+    async restoreEmployee(employeeCode, restoredByUserId) {
+        const employee = await Employee.findOne({
+            employee_code: employeeCode,
+            is_deleted: true
+        });
+        if (!employee) throw ApiError.notFound('Deleted Employee not found');
+
+        const restoreStatus = employee.status === 'active' ? 'inactive' : employee.status;
+
+        employee.is_deleted = false;
+        employee.deleted_at = null;
+        employee.deleted_by = null;
+        employee.status = restoreStatus;
+        employee.status_history.push({
+            from: 'deleted', to: restoreStatus,
+            changed_by: restoredByUserId,
+            reason: 'Employee restored by admin',
+            notes: 'Restored as inactive — activate manually',
+            changed_at: new Date()
         });
 
-        return employee.populate('role_ids', 'name');
+        await employee.save();
+
+        await User.updateOne(
+            { _id: employee.user_id },
+            { $set: { account_status: 'inactive' } }
+        );
+
+        return { employee };
     }
 
-    // Get Employee Activity Logs
-    async getEmployeeActivityLogs(employeeId, { page = 1, limit = 20 } = {}) {
-        const [logs, total] = await Promise.all([
-            EmployeeActivityLog.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
-            EmployeeActivityLog.countDocuments({ employee_id: employeeId })
-        ]);
-        return { logs, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
+    // Check Employee Access (Auth middleware use)
+    async checkEmployeeAccess(userId) {
+        const emp = await Employee.findOne({ user_id: userId }).lean();
+
+        if (!emp) return { valid: false, reason: 'Employee profile not found' };
+        if (emp.is_deleted === true) return { valid: false, reason: 'Your account has been deleted.' };
+        if (emp.status !== 'active') {
+            const reasons = {
+                pending: 'Your account is pending approval.',
+                inactive: 'Your account is inactive.',
+                blocked: 'Your account has been blocked.'
+            };
+            return { valid: false, reason: reasons[emp.status] || 'Account is not active.' };
+        }
+
+        return { valid: true, employee: emp };
     }
+
+
+
 
     // ============ PRODUCT MANAGEMENT ============
 

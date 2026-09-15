@@ -88,10 +88,9 @@ import SubAdminEdit from '../pages/admin/sub-admins/SubAdminEdit';
 
 
 // Admin - Employees
-import Employees from '../pages/admin/employees/Employees';
+import EmployeeList from '../pages/admin/employees/EmployeeList';
 import EmployeeDetails from '../pages/admin/employees/EmployeeDetails';
-import CreateEmployee from '../pages/admin/employees/CreateEmployee';
-import EmployeeEdit from '../pages/admin/employees/EmployeeEdit';
+import EmployeeManagement from '../pages/admin/employees/EmployeeManagement';
 
 // Admin - Products
 import AdminProducts from '../pages/admin/products/Products';
@@ -251,11 +250,10 @@ const AppRoutes = () => {
                 <Route path="/admin/sub-admins/:subAdminCode/edit" element={<SubAdminEdit />} />
 
                 {/* Employees */}
-                <Route path="employees" element={<Employees />} />
-                <Route path="employees/:employeeId" element={<EmployeeDetails />} />
-                <Route path="employees/create" element={<CreateEmployee />} />
-                <Route path="employees/:employeeId" element={<EmployeeDetails />} />
-                <Route path="employees/:employeeId/edit" element={<EmployeeEdit />} />
+                <Route path="/admin/employees" element={<EmployeeList />} />
+                <Route path="/admin/employees/create" element={<EmployeeManagement />} />
+                <Route path="/admin/employees/:employeeCode" element={<EmployeeDetails />} />
+                <Route path="/admin/employees/:employeeCode/edit" element={<EmployeeManagement />} />
 
                 {/* Products */}
                 <Route path="products" element={<AdminProducts />} />

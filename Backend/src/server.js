@@ -9,7 +9,7 @@ const PORT = config.PORT || 5000;
 
 const server = app.listen(PORT, () => {
 
-    console.log(`\n🔗 API URL: http://localhost:${PORT}/api`);
+    console.log(`\n🔗 API URL (SERVER) : http://localhost:${PORT}/api`);
 
     // console.log('\n🚀 SUCCESSFULLY RUN E-COMMERCE MARKETPLACE SERVER');
     // console.log(`\n📡 Port: ${PORT}`);

@@ -247,96 +247,6 @@ router.delete(
 
 // ============== SUB-ADMIN ROUTES ==================
 
-// // Get All Sub-Admins
-// router.get(
-//     '/sub-admins',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.getAllSubAdmins, 'query'),
-//     adminController.getAllSubAdmins
-// );
-
-// // Get Sub-Admin Stats
-// router.get(
-//     '/sub-admins/stats',
-//     checkPermission('manage_sub_admins'),
-//     adminController.getSubAdminStats
-// );
-
-// // Get Sub-Admin By Code
-// router.get(
-//     '/sub-admins/:subAdminCode',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.subAdminCodeParam, 'params'),
-//     adminController.getSubAdminByCode
-// );
-
-// // Get Sub-Admin History
-// router.get(
-//     '/sub-admins/:subAdminCode/history',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.subAdminCodeParam, 'params'),
-//     adminController.getSubAdminHistory
-// );
-
-// // Create Sub-Admin
-// router.post(
-//     '/sub-admins',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.createSubAdmin),
-//     adminController.createSubAdmin
-// );
-
-// // Update Sub-Admin Details
-// router.put(
-//     '/sub-admins/:subAdminCode',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.subAdminCodeParam, 'params'),
-//     validate(adminValidation.updateSubAdmin),
-//     adminController.updateSubAdmin
-// );
-
-// // Update Sub-Admin Status
-// router.patch(
-//     '/sub-admins/:subAdminCode/status',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.subAdminCodeParam, 'params'),
-//     validate(adminValidation.updateSubAdminStatus),
-//     adminController.updateSubAdminStatus
-// );
-
-// // Delete Sub-Admin (Soft)
-// router.delete(
-//     '/sub-admins/:subAdminCode',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.subAdminCodeParam, 'params'),
-//     adminController.deleteSubAdmin
-// );
-
-// // Get Deleted Sub-Admins — ye /stats se PEHLE rakho
-// router.get(
-//     '/sub-admins/deleted',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.getDeletedSubAdmins, 'query'),
-//     adminController.getDeletedSubAdmins
-// );
-
-// // Restore Sub-Admin
-// router.put(
-//     '/sub-admins/:subAdminCode/restore',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.subAdminCodeParam, 'params'),
-//     adminController.restoreSubAdmin
-// );
-
-// // '/sub-admins/deleted' → '/sub-admins/:subAdminCode'
-// router.get(
-//     '/sub-admins/:subAdminCode',
-//     checkPermission('manage_sub_admins'),
-//     validate(adminValidation.subAdminCodeParam, 'params'),
-//     adminController.getSubAdminByCode
-// );
-
-
 // Get all Sub-Admins
 router.get(
     '/sub-admins',
@@ -459,29 +369,180 @@ router.put(
 
 
 
-// ============ EMPLOYEE MANAGEMENT ============
+// // ============ EMPLOYEE MANAGEMENT ============
 
-// Employee Stats
+// // Employee Stats
+// router.get(
+//     '/employees/stats',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeeStats
+// );
+
+// // Export Employees
+// router.get(
+//     '/employees/export',
+//     checkPermission('manage_employees'),
+//     adminController.exportEmployees);
+
+// // Get All Employees
+// router.get(
+//     '/employees',
+//     checkPermission('manage_employees'),
+//     adminController.getAllEmployees
+// );
+
+// // Create Employee
+// router.post(
+//     '/employees',
+//     checkPermission('manage_employees'),
+//     validate(adminValidation.createEmployee),
+//     adminController.createEmployee
+// );
+
+// // Transfer Employee to Another Seller
+// router.put(
+//     '/employees/:employeeId/transfer',
+//     checkPermission('manage_employees'),
+//     validate(adminValidation.transferEmployee),
+//     adminController.transferEmployeeToSeller
+// );
+
+// // Upload Profile Image
+// router.post(
+//     '/employees/:employeeId/profile-image',
+//     checkPermission('manage_employees'),
+//     adminController.uploadEmployeeProfileImage
+// );
+
+// // Get Employee by ID
+// router.get(
+//     '/employees/:employeeId',
+//     checkPermission('manage_employees'),
+//     validate(adminValidation.employeeIdParam),
+//     adminController.getEmployeeById
+// );
+
+// // Update Employee
+// router.put(
+//     '/employees/:employeeId',
+//     checkPermission('manage_employees'),
+//     validate(adminValidation.updateEmployee),
+//     adminController.updateEmployee
+// );
+
+// // Delete Employee
+// router.delete(
+//     '/employees/:employeeId',
+//     checkPermission('manage_employees'),
+//     validate(adminValidation.employeeIdParam),
+//     adminController.deleteEmployee
+// );
+
+// // Update Employee Status
+// router.patch(
+//     '/employees/:employeeId/status',
+//     checkPermission('manage_employees'),
+//     validate(adminValidation.updateEmployeeStatus),
+//     adminController.updateEmployeeStatus
+// );
+
+// // Get Employee Performance
+// router.get(
+//     '/employees/:employeeId/performance',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeePerformance
+// );
+
+// //  Get Employee Transactions
+// router.get(
+//     '/employees/:employeeId/transactions',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeeTransactions
+// );
+
+// //  Get Employee Sellers (Current & Past)
+// router.get(
+//     '/employees/:employeeId/sellers',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeeSellers
+// );
+
+// //  Get Employee Career History
+// router.get(
+//     '/employees/:employeeId/career-history',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeeCareerHistory
+// );
+
+// //  Get Employee Reports (Filter by Month/Year)
+// router.get(
+//     '/employees/:employeeId/reports',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeeReports
+// );
+
+// // Get Employee Roles
+// router.get(
+//     '/employees/:employeeId/roles',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeeRoles
+// );
+
+// // Assign Role to Employee
+// router.post(
+//     '/employees/:employeeId/roles',
+//     checkPermission('manage_employees'),
+//     adminController.assignEmployeeRole
+// );
+
+// // Remove Role from Employee
+// router.delete(
+//     '/employees/:employeeId/roles/:roleId',
+//     checkPermission('manage_employees'),
+//     adminController.removeEmployeeRole
+// );
+
+// // Get Employee Activity Logs
+// router.get(
+//     '/employees/:employeeId/activity-logs',
+//     checkPermission('manage_employees'),
+//     adminController.getEmployeeActivityLogs
+// );
+
+
+// ============ EMPLOYEE ROUTES ============
+
+// Stats (before dynamic routes)
 router.get(
     '/employees/stats',
     checkPermission('manage_employees'),
     adminController.getEmployeeStats
 );
 
-// Export Employees
+// Available users for employee creation
 router.get(
-    '/employees/export',
+    '/employees/available-users',
     checkPermission('manage_employees'),
-    adminController.exportEmployees);
+    adminController.getAvailableUsersForEmployee
+);
 
-// Get All Employees
+// Deleted list (before dynamic routes)
+router.get(
+    '/employees/deleted',
+    checkPermission('manage_employees'),
+    validate(adminValidation.getDeletedEmployees, 'query'),
+    adminController.getDeletedEmployees
+);
+
+// List
 router.get(
     '/employees',
     checkPermission('manage_employees'),
+    validate(adminValidation.getAllEmployees, 'query'),
     adminController.getAllEmployees
 );
 
-// Create Employee
+// Create
 router.post(
     '/employees',
     checkPermission('manage_employees'),
@@ -489,115 +550,49 @@ router.post(
     adminController.createEmployee
 );
 
-// Transfer Employee to Another Seller
+// Update
 router.put(
-    '/employees/:employeeId/transfer',
+    '/employees/:employeeCode',
     checkPermission('manage_employees'),
-    validate(adminValidation.transferEmployee),
-    adminController.transferEmployeeToSeller
-);
-
-// Upload Profile Image
-router.post(
-    '/employees/:employeeId/profile-image',
-    checkPermission('manage_employees'),
-    adminController.uploadEmployeeProfileImage
-);
-
-// Get Employee by ID
-router.get(
-    '/employees/:employeeId',
-    checkPermission('manage_employees'),
-    validate(adminValidation.employeeIdParam),
-    adminController.getEmployeeById
-);
-
-// Update Employee
-router.put(
-    '/employees/:employeeId',
-    checkPermission('manage_employees'),
+    validate(adminValidation.employeeCodeParam, 'params'),
     validate(adminValidation.updateEmployee),
     adminController.updateEmployee
 );
 
-// Delete Employee
-router.delete(
-    '/employees/:employeeId',
+// Status
+router.put(
+    '/employees/:employeeCode/status',
     checkPermission('manage_employees'),
-    validate(adminValidation.employeeIdParam),
-    adminController.deleteEmployee
-);
-
-// Update Employee Status
-router.patch(
-    '/employees/:employeeId/status',
-    checkPermission('manage_employees'),
+    validate(adminValidation.employeeCodeParam, 'params'),
     validate(adminValidation.updateEmployeeStatus),
     adminController.updateEmployeeStatus
 );
 
-// Get Employee Performance
-router.get(
-    '/employees/:employeeId/performance',
+// Restore
+router.put(
+    '/employees/:employeeCode/restore',
     checkPermission('manage_employees'),
-    adminController.getEmployeePerformance
+    validate(adminValidation.employeeCodeParam, 'params'),
+    adminController.restoreEmployee
 );
 
-//  Get Employee Transactions
-router.get(
-    '/employees/:employeeId/transactions',
-    checkPermission('manage_employees'),
-    adminController.getEmployeeTransactions
-);
-
-//  Get Employee Sellers (Current & Past)
-router.get(
-    '/employees/:employeeId/sellers',
-    checkPermission('manage_employees'),
-    adminController.getEmployeeSellers
-);
-
-//  Get Employee Career History
-router.get(
-    '/employees/:employeeId/career-history',
-    checkPermission('manage_employees'),
-    adminController.getEmployeeCareerHistory
-);
-
-//  Get Employee Reports (Filter by Month/Year)
-router.get(
-    '/employees/:employeeId/reports',
-    checkPermission('manage_employees'),
-    adminController.getEmployeeReports
-);
-
-// Get Employee Roles
-router.get(
-    '/employees/:employeeId/roles',
-    checkPermission('manage_employees'),
-    adminController.getEmployeeRoles
-);
-
-// Assign Role to Employee
-router.post(
-    '/employees/:employeeId/roles',
-    checkPermission('manage_employees'),
-    adminController.assignEmployeeRole
-);
-
-// Remove Role from Employee
+// Delete (soft)
 router.delete(
-    '/employees/:employeeId/roles/:roleId',
+    '/employees/:employeeCode',
     checkPermission('manage_employees'),
-    adminController.removeEmployeeRole
+    validate(adminValidation.employeeCodeParam, 'params'),
+    adminController.deleteEmployee
 );
 
-// Get Employee Activity Logs
+// Details (LAST — catch-all)
 router.get(
-    '/employees/:employeeId/activity-logs',
+    '/employees/:employeeCode',
     checkPermission('manage_employees'),
-    adminController.getEmployeeActivityLogs
+    validate(adminValidation.employeeCodeParam, 'params'),
+    adminController.getEmployeeByCode
 );
+
+
 
 
 // ============ PRODUCT MANAGEMENT  ===========

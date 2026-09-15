@@ -160,6 +160,7 @@ const ApiService = {
         });
     },
 
+
     // =========================== ADMIN MODULE =============================
 
     // 1 DASHBORAD APIs ------------
@@ -302,108 +303,8 @@ const ApiService = {
         });
     },
 
-    // 3 SELLER MANAGEMENT APIs -------------
 
-    // Get seller stats
-    getSellerStats: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers/stats`, { headers });
-    },
-
-    // Export sellers to CSV
-    exportSellers: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers/export`, {
-            headers,
-            params,
-            responseType: 'blob',
-        });
-    },
-
-    // Get all sellers (with filters)
-    getAllSellers: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers`, { headers, params });
-    },
-
-    // Get seller details (accepts both _id and seller_code)
-    getSellerByCode: (sellerIdentifier) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
-    },
-
-    // Update seller details (accepts both _id and seller_code)
-    updateSellerDetails: (sellerCode, data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerCode}`, data, { headers });
-    },
-
-    // Update seller status (single route - handles all transitions)
-    updateSellerStatus: (sellerIdentifier, data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/sellers/${sellerIdentifier}/status`, data, { headers });
-    },
-
-    // Delete seller (cascade - removes seller + user + products + employees + reviews)
-    deleteSeller: (sellerIdentifier) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
-    },
-
-
-    // // =================== SUB-ADMIN APIs =============================
-
-    // // Get all sub-admins (paginated + filters)
-    // getAllSubAdmins: (params = {}) => {
-    //     setAuthHeaders();
-    //     return axios.get(`${API_URL}/admin/sub-admins`, { params, headers });
-    // },
-
-    // // Get sub-admin stats (for home page cards)
-    // getSubAdminStats: () => {
-    //     setAuthHeaders();
-    //     return axios.get(`${API_URL}/admin/sub-admins/stats`, { headers });
-    // },
-
-    // // Get sub-admin by code (details + edit page)
-    // getSubAdminByCode: (subAdminCode) => {
-    //     setAuthHeaders();
-    //     return axios.get(`${API_URL}/admin/sub-admins/${subAdminCode}`, { headers });
-    // },
-
-    // // Get sub-admin history (status + role)
-    // getSubAdminHistory: (subAdminCode) => {
-    //     setAuthHeaders();
-    //     return axios.get(`${API_URL}/admin/sub-admins/${subAdminCode}/history`, { headers });
-    // },
-
-    // // Create sub-admin
-    // createSubAdmin: (data) => {
-    //     setAuthHeaders();
-    //     return axios.post(`${API_URL}/admin/sub-admins`, data, { headers });
-    // },
-
-    // // Update sub-admin details
-    // updateSubAdminDetails: (subAdminCode, data) => {
-    //     setAuthHeaders();
-    //     return axios.put(`${API_URL}/admin/sub-admins/${subAdminCode}`, data, { headers });
-    // },
-
-    // // Update sub-admin status (single route - handles all transitions)
-    // updateSubAdminStatus: (subAdminCode, data) => {
-    //     setAuthHeaders();
-    //     return axios.patch(`${API_URL}/admin/sub-admins/${subAdminCode}/status`, data, { headers });
-    // },
-
-    // // Delete sub-admin (soft delete - blocks user account)
-    // deleteSubAdmin: (subAdminCode) => {
-    //     setAuthHeaders();
-    //     return axios.delete(`${API_URL}/admin/sub-admins/${subAdminCode}`, { headers });
-    // },
-
-
-
-    // =================== SUB-ADMIN APIs =============================
+    // 3 SUB-ADMIN APIs ----------------
 
     // Get all sub-admins (paginated + filters)
     getAllSubAdmins: (params = {}) => {
@@ -466,8 +367,116 @@ const ApiService = {
     },
 
 
+    // 4 SELLER MANAGEMENT APIs -------------
+
+    // Get seller stats
+    getSellerStats: () => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sellers/stats`, { headers });
+    },
+
+    // Export sellers to CSV
+    exportSellers: (params) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sellers/export`, {
+            headers,
+            params,
+            responseType: 'blob',
+        });
+    },
+
+    // Get all sellers (with filters)
+    getAllSellers: (params) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sellers`, { headers, params });
+    },
+
+    // Get seller details (accepts both _id and seller_code)
+    getSellerByCode: (sellerIdentifier) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
+    },
+
+    // Update seller details (accepts both _id and seller_code)
+    updateSellerDetails: (sellerCode, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/sellers/${sellerCode}`, data, { headers });
+    },
+
+    // Update seller status (single route - handles all transitions)
+    updateSellerStatus: (sellerIdentifier, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/sellers/${sellerIdentifier}/status`, data, { headers });
+    },
+
+    // Delete seller (cascade - removes seller + user + products + employees + reviews)
+    deleteSeller: (sellerIdentifier) => {
+        setAuthHeaders();
+        return axios.delete(`${API_URL}/admin/sellers/${sellerIdentifier}`, { headers });
+    },
 
 
+    // ============ EMPLOYEE MANAGEMENT APIs ============
+
+    // Get all employees (paginated + filters)
+    getAllEmployees: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/employees`, { params, headers });
+    },
+
+    // Get employee stats
+    getEmployeeStats: () => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/employees/stats`, { headers });
+    },
+
+    // Get available users for employee creation (searchable email dropdown)
+    getAvailableUsersForEmployee: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/employees/available-users`, { params, headers });
+    },
+
+    // Get deleted employees (Deleted tab)
+    getDeletedEmployees: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/employees/deleted`, { params, headers });
+    },
+
+    // Get employee by code
+    getEmployeeByCode: (employeeCode) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/employees/${employeeCode}`, { headers });
+    },
+
+    // Create employee
+    createEmployee: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/employees`, data, { headers });
+    },
+
+    // Update employee details
+    updateEmployeeDetails: (employeeCode, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/employees/${employeeCode}`, data, { headers });
+    },
+
+    // Update employee status
+    updateEmployeeStatus: (employeeCode, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/employees/${employeeCode}/status`, data, { headers });
+    },
+
+    // Restore deleted employee
+    restoreEmployee: (employeeCode) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/employees/${employeeCode}/restore`, {}, { headers });
+    },
+
+    // Delete employee (soft)
+    deleteEmployee: (employeeCode) => {
+        setAuthHeaders();
+        return axios.delete(`${API_URL}/admin/employees/${employeeCode}`, { headers });
+    },
 
 
     // ============ REVIEW MANAGEMENT APIs ============
@@ -499,127 +508,9 @@ const ApiService = {
 
 
 
+    // 4 PRODUCT MANAGEMENT APIs -------------------
 
-
-
-
-    // 4  EMPLOYEE MANAGEMENT APIs  ----------- 
-
-    // Get All Employees
-    getAllEmployees: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees`, { headers, params });
-    },
-
-    // Get Employee Stats
-    getEmployeeStats: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/stats`, { headers });
-    },
-
-    // Create Employee
-    createEmployee: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/employees`, data, { headers });
-    },
-
-    // Get Employee by ID
-    getEmployeeById: (employeeId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}`, { headers });
-    },
-
-    // Update Employee
-    updateEmployee: (employeeId, data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/employees/${employeeId}`, data, { headers });
-    },
-
-    // Delete Employee
-    deleteEmployee: (employeeId) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/admin/employees/${employeeId}`, { headers });
-    },
-
-    // Update Employee Status
-    updateEmployeeStatus: (employeeId, data) => {
-        setAuthHeaders();
-        return axios.patch(`${API_URL}/admin/employees/${employeeId}/status`, data, { headers });
-    },
-
-    // Transfer Employee to Another Seller
-    transferEmployee: (employeeId, data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/employees/${employeeId}/transfer`, data, { headers });
-    },
-
-    // Export Employees
-    exportEmployees: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/export`, { headers, params, responseType: 'blob' });
-    },
-
-    // Get Employee Performance
-    getEmployeePerformance: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}/performance`, { headers, params });
-    },
-
-    // Get Employee Transactions
-    getEmployeeTransactions: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}/transactions`, { headers, params });
-    },
-
-    // Get Employee Sellers (Current & Past)
-    getEmployeeSellers: (employeeId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}/sellers`, { headers });
-    },
-
-    // Get Employee Career History
-    getEmployeeCareerHistory: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}/career-history`, { headers, params });
-    },
-
-    // Get Employee Reports (Filter by Month/Year)
-    getEmployeeReports: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}/reports`, { headers, params });
-    },
-
-    // Get Employee Roles
-    getEmployeeRoles: (employeeId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}/roles`, { headers });
-    },
-
-    // Assign Role to Employee
-    assignEmployeeRole: (employeeId, data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/employees/${employeeId}/roles`, data, { headers });
-    },
-
-    // Remove Role from Employee
-    removeEmployeeRole: (employeeId, roleId) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/admin/employees/${employeeId}/roles/${roleId}`, { headers });
-    },
-
-    // Upload Profile Image
-    uploadEmployeeProfileImage: (employeeId, formData) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/employees/${employeeId}/profile-image`, formData, { headers: formDataHeaders });
-    },
-
-    // Get Employee Activity Logs -------------
-    getEmployeeActivityLogs: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/employees/${employeeId}/activity-logs`, { headers, params });
-    },
-
-    uct: (data) => {
+    product: (data) => {
         setAuthHeaders();
         return axios.post(`${API_URL}/admin/products`, data);
     },
@@ -630,7 +521,6 @@ const ApiService = {
         return axios.get(`${API_URL}/admin/products/${productCode}`);
     },
 
-    // 4 PRODUCT MANAGEMENT APIs -------------------
 
     // Get Product Stats
     getProductStats: () => {
@@ -1738,174 +1628,174 @@ const ApiService = {
 
     // ============ EMPLOYEE MODULE ============
 
-    // Get employee profile (Self)
-    getEmployeeProfile: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/profile`, {
-            headers: headers,
-        });
-    },
+    // // Get employee profile (Self)
+    // getEmployeeProfile: () => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/profile`, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Update employee profile (Self)
-    updateEmployeeProfile: (data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/employee/profile`, data, {
-            headers: headers,
-        });
-    },
+    // // Update employee profile (Self)
+    // updateEmployeeProfile: (data) => {
+    //     setAuthHeaders();
+    //     return axios.put(`${API_URL}/employee/profile`, data, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Get employee dashboard
-    getEmployeeDashboard: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/dashboard`, {
-            headers: headers,
-        });
-    },
+    // // Get employee dashboard
+    // getEmployeeDashboard: () => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/dashboard`, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Get employee dashboard statistics
-    getEmployeeDashboardStats: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/dashboard/statistics`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get employee dashboard statistics
+    // getEmployeeDashboardStats: (params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/dashboard/statistics`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
-    // Get my activities (Self)
-    getMyActivities: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/activities`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get my activities (Self)
+    // getMyActivities: (params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/activities`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
-    // Get employee notifications
-    getEmployeeNotifications: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/notifications`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get employee notifications
+    // getEmployeeNotifications: (params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/notifications`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
-    // Mark employee notification as read
-    markEmployeeNotificationRead: (notificationId) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/employee/notifications/${notificationId}/read`, {}, {
-            headers: headers,
-        });
-    },
+    // // Mark employee notification as read
+    // markEmployeeNotificationRead: (notificationId) => {
+    //     setAuthHeaders();
+    //     return axios.put(`${API_URL}/employee/notifications/${notificationId}/read`, {}, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Get employees by seller (Admin/Seller)
-    getEmployeesBySeller: (sellerId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/seller/${sellerId}`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get employees by seller (Admin/Seller)
+    // getEmployeesBySeller: (sellerId, params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/seller/${sellerId}`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
-    // Get employee by ID
-    getEmployeeById: (employeeId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/${employeeId}`, {
-            headers: headers,
-        });
-    },
+    // // Get employee by ID
+    // getEmployeeById: (employeeId) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/${employeeId}`, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Update employee (Admin/Seller)
-    updateEmployee: (employeeId, data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/employee/${employeeId}`, data, {
-            headers: headers,
-        });
-    },
+    // // Update employee (Admin/Seller)
+    // updateEmployee: (employeeId, data) => {
+    //     setAuthHeaders();
+    //     return axios.put(`${API_URL}/employee/${employeeId}`, data, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Update employee status
-    updateEmployeeStatus: (employeeId, data) => {
-        setAuthHeaders();
-        return axios.patch(`${API_URL}/employee/${employeeId}/status`, data, {
-            headers: headers,
-        });
-    },
+    // // Update employee status
+    // updateEmployeeStatus: (employeeId, data) => {
+    //     setAuthHeaders();
+    //     return axios.patch(`${API_URL}/employee/${employeeId}/status`, data, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Delete employee
-    deleteEmployee: (employeeId) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/employee/${employeeId}`, {
-            headers: headers,
-        });
-    },
+    // // Delete employee
+    // deleteEmployee: (employeeId) => {
+    //     setAuthHeaders();
+    //     return axios.delete(`${API_URL}/employee/${employeeId}`, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Assign role to employee
-    assignEmployeeRole: (employeeId, data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/employee/${employeeId}/roles`, data, {
-            headers: headers,
-        });
-    },
+    // // Assign role to employee
+    // assignEmployeeRole: (employeeId, data) => {
+    //     setAuthHeaders();
+    //     return axios.post(`${API_URL}/employee/${employeeId}/roles`, data, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Remove role from employee
-    removeEmployeeRole: (employeeId, roleId, data) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/employee/${employeeId}/roles/${roleId}`, {
-            headers: headers,
-            data: data,
-        });
-    },
+    // // Remove role from employee
+    // removeEmployeeRole: (employeeId, roleId, data) => {
+    //     setAuthHeaders();
+    //     return axios.delete(`${API_URL}/employee/${employeeId}/roles/${roleId}`, {
+    //         headers: headers,
+    //         data: data,
+    //     });
+    // },
 
-    // Get employee roles
-    getEmployeeRoles: (employeeId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/${employeeId}/roles`, {
-            headers: headers,
-        });
-    },
+    // // Get employee roles
+    // getEmployeeRoles: (employeeId) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/${employeeId}/roles`, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Get employee permissions
-    getEmployeePermissions: (employeeId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/${employeeId}/permissions`, {
-            headers: headers,
-        });
-    },
+    // // Get employee permissions
+    // getEmployeePermissions: (employeeId) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/${employeeId}/permissions`, {
+    //         headers: headers,
+    //     });
+    // },
 
-    // Get employee role history
-    getEmployeeRoleHistory: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/${employeeId}/role-history`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get employee role history
+    // getEmployeeRoleHistory: (employeeId, params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/${employeeId}/role-history`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
-    // Get employee activities (Admin/Seller)
-    getEmployeeActivities: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/${employeeId}/activities`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get employee activities (Admin/Seller)
+    // getEmployeeActivities: (employeeId, params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/${employeeId}/activities`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
-    // Get employee performance
-    getEmployeePerformance: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/${employeeId}/performance`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get employee performance
+    // getEmployeePerformance: (employeeId, params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/${employeeId}/performance`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
-    // Get employee reports
-    getEmployeeReports: (employeeId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/employee/${employeeId}/reports`, {
-            headers: headers,
-            params: params,
-        });
-    },
+    // // Get employee reports
+    // getEmployeeReports: (employeeId, params) => {
+    //     setAuthHeaders();
+    //     return axios.get(`${API_URL}/employee/${employeeId}/reports`, {
+    //         headers: headers,
+    //         params: params,
+    //     });
+    // },
 
     // ============================================================
     // NOTIFICATION MODULE - FIXED WITH ERROR HANDLING

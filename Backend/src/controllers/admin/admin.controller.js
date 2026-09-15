@@ -1079,7 +1079,7 @@ const adminController = {
     }),
 
 
-    // =================== SUB-ADMIN mANAGEMENT CONTROLLERS ======================
+    // =================== SUB-ADMIN MANAGEMENT CONTROLLERS ======================
 
     // Get All Sub-Admins
     getAllSubAdmins: asyncHandler(async (req, res) => {
@@ -1247,7 +1247,7 @@ const adminController = {
 
 
 
-    
+
     // ============ REVIEW MANAGEMENT CONTROLLER ============
 
     // Get All Reviews
@@ -1324,165 +1324,121 @@ const adminController = {
         res.status(200).json(ApiResponse.success(review, `Review ${action}ed successfully`));
     }),
 
+    
+    // ============ EMPLOYEE CONTROLLERS ============
 
-
-
-    // ============ EMPLOYEE MANAGEMENT ============
-
-    // Get Employee Stats
     getEmployeeStats: asyncHandler(async (req, res) => {
         const stats = await adminService.getEmployeeStats();
         res.status(200).json(ApiResponse.success(stats, 'Employee stats fetched'));
     }),
 
-    // Get All Employees
     getAllEmployees: asyncHandler(async (req, res) => {
-        const { page, limit, search, status, sort_by, sort_order } = req.query;
-
-        const result = await adminService.getAllEmployees({
-            page, limit, search, status,
-            sortBy: sort_by, sortOrder: sort_order
-        });
-
-        res.status(200).json({
-            success: true,
-            data: result.employees,       // Direct array
-            total: result.pagination.total,
-            totalPages: result.pagination.totalPages,
-            page: result.pagination.page,
-            limit: result.pagination.limit
-        });
+        const result = await adminService.getAllEmployees(req.query);
+        res.status(200).json(ApiResponse.success(result, 'Employees fetched'));
     }),
 
-    // Create Employee
+    getAvailableUsersForEmployee: asyncHandler(async (req, res) => {
+        const result = await adminService.getAvailableUsersForEmployee(req.query);
+        res.status(200).json(ApiResponse.success(result, 'Available users fetched'));
+    }),
+
+    getDeletedEmployees: asyncHandler(async (req, res) => {
+        const result = await adminService.getDeletedEmployees(req.query);
+        res.status(200).json(ApiResponse.success(result, 'Deleted employees fetched'));
+    }),
+
+    getEmployeeByCode: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;
+        const result = await adminService.getEmployeeByCode(employeeCode);
+        res.status(200).json(ApiResponse.success(result, 'Employee fetched'));
+    }),
+
     createEmployee: asyncHandler(async (req, res) => {
-        const employeeData = req.body;
-        const employee = await adminService.createEmployee(employeeData, req.userId);
-        res.status(201).json(ApiResponse.created(employee, 'Employee created successfully'));
+        const result = await adminService.createEmployee(req.body, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'create', module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${result.employee.employee_code} created`,
+            newData: { employee_type: result.employee.employee_type },
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(201).json(ApiResponse.success(result, 'Employee created'));
     }),
 
-    // Get Employee by ID
-    getEmployeeById: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const employee = await adminService.getEmployeeById(employeeId);
-        res.status(200).json(ApiResponse.success(employee, 'Employee details fetched'));
-    }),
-
-    // Update Employee
     updateEmployee: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const updateData = req.body;
-        const employee = await adminService.updateEmployee(employeeId, updateData, req.userId);
-        res.status(200).json(ApiResponse.success(employee, 'Employee updated successfully'));
+        const { employeeCode } = req.params;
+        const result = await adminService.updateEmployee(employeeCode, req.body, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'update', module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${employeeCode} updated`,
+            newData: req.body,
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(200).json(ApiResponse.success(result, 'Employee updated'));
     }),
 
-    // Delete Employee
-    deleteEmployee: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        await adminService.deleteEmployee(employeeId, req.userId);
-        res.status(200).json(ApiResponse.success(null, 'Employee deleted successfully'));
-    }),
-
-    // Update Employee Status
+    // updateEmployeeStatus
     updateEmployeeStatus: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { status, reason } = req.body;
-        const employee = await adminService.updateEmployeeStatus(employeeId, status, reason, req.userId);
-        res.status(200).json(ApiResponse.success(employee, `Employee status updated to ${status}`));
+        const { employeeCode } = req.params;        // 👈 employeeId → employeeCode
+        const { status, reason, notes } = req.body; // 👈 notes bhi include karo
+
+        const result = await adminService.updateEmployeeStatus(
+            employeeCode,
+            { status, reason, notes },
+            req.userId
+        );
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'status_change',
+            module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${employeeCode} status changed to ${status}`,
+            newData: { status, reason },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success'
+        });
+
+        res.status(200).json(
+            ApiResponse.success(result, `Status updated to ${status}`)
+        );
     }),
 
-    // Transfer Employee to Another Seller
-    transferEmployeeToSeller: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { newSellerId, newRoleId, newPermissionIds } = req.body;
-        const employee = await adminService.transferEmployeeToSeller(employeeId, newSellerId, newRoleId, newPermissionIds, req.userId);
-        res.status(200).json(ApiResponse.success(employee, 'Employee transferred successfully'));
+
+    deleteEmployee: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;
+        await adminService.deleteEmployee(employeeCode, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'delete', module: 'employee',
+            description: `Employee ${employeeCode} deleted`,
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(200).json(ApiResponse.success(null, 'Employee deleted'));
     }),
 
-    // Export Employees
-    exportEmployees: asyncHandler(async (req, res) => {
-        const { search, status } = req.query;
-        const csv = await adminService.exportEmployees({ search, status });
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="employees.csv"');
-        res.status(200).send(csv);
+    restoreEmployee: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;
+        const result = await adminService.restoreEmployee(employeeCode, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'restore', module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${employeeCode} restored`,
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(200).json(ApiResponse.success(result, 'Employee restored. Activate manually.'));
     }),
 
-    // Upload Profile Image
-    uploadEmployeeProfileImage: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const employee = await adminService.uploadEmployeeProfileImage(employeeId, req.file);
-        res.status(200).json(ApiResponse.success(employee, 'Profile image uploaded'));
-    }),
 
-    // Get Employee Performance
-    getEmployeePerformance: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { period = 'monthly' } = req.query;
-        const data = await adminService.getEmployeePerformance(employeeId, period);
-        res.status(200).json(ApiResponse.success(data, 'Employee performance fetched'));
-    }),
-
-    // Get Employee Transactions
-    getEmployeeTransactions: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { page, limit } = req.query;
-        const result = await adminService.getEmployeeTransactions(employeeId, { page, limit });
-        res.status(200).json(ApiResponse.paginated(result.transactions, result.pagination, 'Employee transactions fetched'));
-    }),
-
-    // Get Employee Sellers (Current & Past)
-    getEmployeeSellers: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const data = await adminService.getEmployeeSellers(employeeId);
-        res.status(200).json(ApiResponse.success(data, 'Employee sellers fetched'));
-    }),
-
-    // Get Employee Career History
-    getEmployeeCareerHistory: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { page, limit } = req.query;
-        const result = await adminService.getEmployeeCareerHistory(employeeId, { page, limit });
-        res.status(200).json(ApiResponse.paginated(result.history, result.pagination, 'Career history fetched'));
-    }),
-
-    // Get Employee Reports (Filter by Month/Year)
-    getEmployeeReports: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { month, year, type } = req.query;
-        const data = await adminService.getEmployeeReports(employeeId, { month, year, type });
-        res.status(200).json(ApiResponse.success(data, 'Employee reports fetched'));
-    }),
-
-    // Get Employee Roles
-    getEmployeeRoles: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const roles = await adminService.getEmployeeRoles(employeeId);
-        res.status(200).json(ApiResponse.success(roles, 'Employee roles fetched'));
-    }),
-
-    // Assign Role to Employee
-    assignEmployeeRole: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { roleIds } = req.body;
-        const employee = await adminService.assignEmployeeRole(employeeId, roleIds, req.userId);
-        res.status(200).json(ApiResponse.success(employee, 'Roles assigned successfully'));
-    }),
-
-    // Remove Role from Employee
-    removeEmployeeRole: asyncHandler(async (req, res) => {
-        const { employeeId, roleId } = req.params;
-        const employee = await adminService.removeEmployeeRole(employeeId, roleId, req.userId);
-        res.status(200).json(ApiResponse.success(employee, 'Role removed successfully'));
-    }),
-
-    // Get Employee Activity Logs
-    getEmployeeActivityLogs: asyncHandler(async (req, res) => {
-        const { employeeId } = req.params;
-        const { page, limit } = req.query;
-        const result = await adminService.getEmployeeActivityLogs(employeeId, { page, limit });
-        res.status(200).json(ApiResponse.paginated(result.logs, result.pagination, 'Activity logs fetched'));
-    }),
 
     // ============ PRODUCT MANAGEMENT ============
 

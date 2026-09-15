@@ -1,209 +1,903 @@
 
+// import React, { useState, useEffect, useCallback } from 'react';
+// import { useParams, useNavigate } from 'react-router-dom';
+// import { toast } from 'react-toastify';
+// import {
+//     FiUser, FiMail, FiPhone, FiBriefcase, FiHash, FiClock, FiCalendar,
+//     FiEdit2, FiAlertCircle, FiRefreshCw, FiActivity, FiShield, FiCheckCircle
+// } from 'react-icons/fi';
+// import { motion } from 'framer-motion';
+// import ApiService from '../../../api/ApiService';
+// import AdminTopbar from '../../../components/admin/AdminTopbar';
 
-import React, { useState, useEffect } from 'react';
+// const EMPLOYEE_TYPE_LABELS = {
+//     manager: 'Manager',
+//     product_manager: 'Product Manager',
+//     order_manager: 'Order Manager',
+//     inventory_manager: 'Inventory Manager',
+//     support_staff: 'Support Staff',
+//     account_manager: 'Account Manager'
+// };
+
+// // ================= INFO ROW =================
+// const InfoRow = ({ icon, label, value }) => (
+//     <div className="flex items-start gap-3 p-3 rounded-xl bg-sky-50/60 hover:bg-sky-50 transition-colors min-w-0">
+//         <div className="mt-0.5 text-sky-600 shrink-0">{icon}</div>
+//         <div className="min-w-0">
+//             <p className="text-xs text-slate-600 mb-0.5">{label}</p>
+//             <p className="text-sm font-medium text-slate-900 break-words">{value || 'Not available'}</p>
+//         </div>
+//     </div>
+// );
+
+// // ================= STAT CARD =================
+// const StatCard = ({ icon, title, value, subtext, color }) => (
+//     <div className="bg-white rounded-2xl p-4 sm:p-5 border border-sky-100 shadow-sm">
+//         <div className="flex items-start justify-between gap-2">
+//             <div className="min-w-0">
+//                 <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1 truncate">{title}</p>
+//                 <h3 className="text-lg sm:text-xl font-bold text-slate-900 capitalize truncate">{value || '—'}</h3>
+//                 {subtext && <p className="text-[11px] sm:text-xs text-slate-400 mt-1 truncate">{subtext}</p>}
+//             </div>
+//             <div className={`p-2.5 sm:p-3 rounded-xl shrink-0 ${color}`}>{icon}</div>
+//         </div>
+//     </div>
+// );
+
+// // ================= MAIN COMPONENT =================
+// const EmployeeDetails = () => {
+//     const { employeeCode } = useParams();
+//     const navigate = useNavigate();
+
+//     const [employee, setEmployee] = useState(null);
+//     const [loading, setLoading] = useState(true);
+//     const [refreshing, setRefreshing] = useState(false);
+//     const [errorMsg, setErrorMsg] = useState('');
+//     const [activeTab, setActiveTab] = useState('overview');
+
+//     const fetchData = useCallback(async (silent = false) => {
+//         if (!employeeCode) {
+//             setErrorMsg('No employee code in URL');
+//             setLoading(false);
+//             return;
+//         }
+
+//         if (!silent) setLoading(true);
+//         else setRefreshing(true);
+
+//         setErrorMsg('');
+//         try {
+//             const res = await ApiService.getEmployeeByCode(employeeCode);
+//             const data = res?.data?.data?.employee || null;
+
+//             if (!data) {
+//                 setEmployee(null);
+//                 setErrorMsg('Employee not found');
+//             } else {
+//                 setEmployee({ ...data });
+//                 if (silent) toast.success('Data refreshed');
+//             }
+//         } catch (error) {
+//             setErrorMsg(error?.response?.data?.message || 'Failed to load');
+//             setEmployee(null);
+//             if (silent) toast.error('Failed to refresh');
+//         } finally {
+//             setLoading(false);
+//             setRefreshing(false);
+//         }
+//     }, [employeeCode]);
+
+//     useEffect(() => { fetchData(); }, [fetchData]);
+
+//     const initials = (employee?.full_name || 'E')
+//         .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'E';
+
+//     const isActive = String(employee?.status || '').toLowerCase() === 'active';
+
+//     const statusBadge = () => {
+//         const styles = {
+//             active: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+//             inactive: 'bg-slate-100 text-slate-600 border-slate-200',
+//             blocked: 'bg-rose-100 text-rose-700 border-rose-200',
+//             pending: 'bg-amber-100 text-amber-700 border-amber-200'
+//         };
+//         const s = employee?.status || 'pending';
+//         return (
+//             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border capitalize ${styles[s] || styles.pending}`}>
+//                 <span className="w-2 h-2 rounded-full bg-current opacity-70" />
+//                 {s}
+//             </span>
+//         );
+//     };
+
+//     const roleBadge = () => (
+//         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border bg-blue-100 text-blue-700 border-blue-200">
+//             <FiBriefcase size={14} />
+//             {EMPLOYEE_TYPE_LABELS[employee?.employee_type] || employee?.employee_type || 'Employee'}
+//         </span>
+//     );
+
+//     // ================= LOADING =================
+//     if (loading) {
+//         return (
+//             <div className="min-h-screen flex items-center justify-center">
+//                 <div className="flex flex-col items-center">
+//                     <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+//                     <p className="text-slate-700 font-medium">Loading employee details...</p>
+//                 </div>
+//             </div>
+//         );
+//     }
+
+//     // ================= NOT FOUND =================
+//     if (!employee) {
+//         return (
+//             <div className="min-h-screen flex items-center justify-center px-4">
+//                 <div className="bg-white border border-sky-100 rounded-2xl shadow-sm p-8 max-w-md w-full text-center">
+//                     <div className="w-20 h-20 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
+//                         <FiAlertCircle size={38} className="text-sky-500" />
+//                     </div>
+//                     <h2 className="text-xl font-bold text-slate-900 mb-2">Employee not found</h2>
+//                     <p className="text-slate-600 mb-6 text-sm">{errorMsg || 'The requested employee could not be loaded.'}</p>
+//                     <div className="flex flex-col sm:flex-row gap-3">
+//                         <button onClick={() => fetchData()} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-sky-200 text-slate-800 rounded-xl hover:bg-sky-50 font-medium">
+//                             <FiRefreshCw size={16} /> Retry
+//                         </button>
+//                         <button onClick={() => navigate('/admin/employees')} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">
+//                             Back to Employees
+//                         </button>
+//                     </div>
+//                 </div>
+//             </div>
+//         );
+//     }
+
+//     const tabs = [
+//         { id: 'overview', label: 'Overview', icon: <FiUser size={16} /> },
+//         { id: 'activity', label: 'Activity', icon: <FiActivity size={16} /> }
+//     ];
+
+//     // ================= RENDER =================
+//     return (
+//         <div className="min-h-screen bg-gradient-to-b from-sky-50 via-[#eaf4ff] to-white pb-10">
+
+//             <AdminTopbar
+//                 title="Employee Details"
+//                 subtitle={employee.full_name}
+//                 actions={
+//                     <>
+//                         <button
+//                             type="button"
+//                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); fetchData(true); }}
+//                             disabled={refreshing}
+//                             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-sky-300 hover:bg-sky-50 sm:px-4 disabled:opacity-60"
+//                         >
+//                             <FiRefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+//                             Refresh
+//                         </button>
+//                         <button
+//                             onClick={() => navigate(`/admin/employees/${employeeCode}/edit`)}
+//                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl hover:shadow-lg text-sm font-semibold transition-all"
+//                             style={{
+//                                 background: 'linear-gradient(to right, #2563eb, #0ea5e9)',
+//                                 color: '#ffffff',
+//                                 boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)'
+//                             }}
+//                         >
+//                             <FiEdit2 size={16} />
+//                             <span>Edit</span>
+//                         </button>
+//                     </>
+//                 }
+//             />
+
+//             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
+
+//                 {/* PROFILE CARD */}
+//                 <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+//                     <div className="h-1.5 bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-500" />
+
+//                     <div className="p-5 sm:p-6">
+//                         {/* MOBILE */}
+//                         <div className="flex flex-col lg:hidden">
+//                             <div className="flex justify-center">
+//                                 <div className="relative shrink-0">
+//                                     <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-lg ring-4 ring-sky-100">
+//                                         {initials}
+//                                     </div>
+//                                     <span className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-4 border-white ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+//                                 </div>
+//                             </div>
+
+//                             <div className="text-center mt-4">
+//                                 <h2 className="truncate text-xl" style={{ color: '#0f172a', fontWeight: 900, letterSpacing: '-0.02em' }}>
+//                                     {employee.full_name || 'Unnamed'}
+//                                 </h2>
+//                                 <p className="truncate text-sm mt-1" style={{ color: '#475569' }}>
+//                                     {employee.email || 'No email'}
+//                                 </p>
+//                                 <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+//                                     {roleBadge()}
+//                                     {statusBadge()}
+//                                 </div>
+//                             </div>
+
+//                             <div className="grid grid-cols-1 gap-2 mt-5">
+//                                 <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl">
+//                                     <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+//                                         <FiHash className="w-4 h-4 text-blue-600" />
+//                                     </div>
+//                                     <div className="min-w-0 text-start ml-2.5">
+//                                         <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Employee Code</p>
+//                                         <p className="text-sm font-mono font-bold truncate" style={{ color: '#1d4ed8' }}>
+//                                             {employee.employee_code || employeeCode}
+//                                         </p>
+//                                     </div>
+//                                 </div>
+
+//                                 {employee.created_at && (
+//                                     <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+//                                         <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+//                                             <FiClock className="w-4 h-4 text-slate-600" />
+//                                         </div>
+//                                         <div className="min-w-0 text-start ml-2.5">
+//                                             <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Joined</p>
+//                                             <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>
+//                                                 {new Date(employee.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+//                                             </p>
+//                                         </div>
+//                                     </div>
+//                                 )}
+//                             </div>
+//                         </div>
+
+//                         {/* DESKTOP */}
+//                         <div className="hidden lg:flex lg:items-center gap-6">
+//                             <div className="relative shrink-0">
+//                                 <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-3xl font-black shadow-lg ring-4 ring-sky-100">
+//                                     {initials}
+//                                 </div>
+//                                 <span className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-4 border-white ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+//                             </div>
+
+//                             <div className="min-w-0 flex-1 flex flex-col items-center justify-center gap-2 text-center">
+//                                 <h2 className="truncate text-2xl" style={{ color: '#0f172a', fontWeight: 900, letterSpacing: '-0.02em' }}>
+//                                     {employee.full_name || 'Unnamed'}
+//                                 </h2>
+//                                 <p className="truncate text-sm mt-1" style={{ color: '#475569' }}>
+//                                     {employee.email || 'No email'}
+//                                 </p>
+//                                 <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+//                                     {roleBadge()}
+//                                     {statusBadge()}
+//                                 </div>
+//                             </div>
+
+//                             <div className="grid grid-cols-1 gap-2 w-64 shrink-0">
+//                                 <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl">
+//                                     <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+//                                         <FiHash className="w-4 h-4 text-blue-600" />
+//                                     </div>
+//                                     <div className="min-w-0 text-start ml-2.5">
+//                                         <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Employee Code</p>
+//                                         <p className="text-sm font-mono font-bold truncate" style={{ color: '#1d4ed8' }}>
+//                                             {employee.employee_code || employeeCode}
+//                                         </p>
+//                                     </div>
+//                                 </div>
+
+//                                 {employee.created_at && (
+//                                     <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+//                                         <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+//                                             <FiClock className="w-4 h-4 text-slate-600" />
+//                                         </div>
+//                                         <div className="min-w-0 text-start ml-2.5">
+//                                             <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Joined</p>
+//                                             <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>
+//                                                 {new Date(employee.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+//                                             </p>
+//                                         </div>
+//                                     </div>
+//                                 )}
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+
+//                 {/* STATS */}
+//                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+//                     <StatCard
+//                         icon={<FiBriefcase size={20} className="text-indigo-600" />}
+//                         title="Employee Type"
+//                         value={EMPLOYEE_TYPE_LABELS[employee.employee_type] || employee.employee_type || '—'}
+//                         subtext="Role"
+//                         color="bg-indigo-100"
+//                     />
+//                     <StatCard
+//                         icon={<FiActivity size={20} className="text-sky-600" />}
+//                         title="Status"
+//                         value={employee.status || 'unknown'}
+//                         subtext="Account state"
+//                         color="bg-sky-100"
+//                     />
+//                     <StatCard
+//                         icon={<FiShield size={20} className="text-blue-600" />}
+//                         title="Seller"
+//                         value={employee.seller_id?.business_name || '—'}
+//                         subtext="Belongs to"
+//                         color="bg-blue-100"
+//                     />
+//                     <StatCard
+//                         icon={<FiUser size={20} className="text-emerald-600" />}
+//                         title="Department"
+//                         value={employee.department || '—'}
+//                         subtext="Assigned to"
+//                         color="bg-emerald-100"
+//                     />
+//                 </div>
+
+
+
+//                 {/* TABS */}
+//                 <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+//                     <div className="flex items-center gap-1 sm:gap-2 p-3 sm:p-4 border-b border-sky-100 overflow-x-auto">
+//                         {tabs.map((t) => (
+//                             <button
+//                                 key={t.id}
+//                                 onClick={() => setActiveTab(t.id)}
+//                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+//                                     activeTab === t.id
+//                                         ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-200'
+//                                         : 'text-slate-700 hover:bg-sky-50'
+//                                 }`}
+//                             >
+//                                 {t.icon} {t.label}
+//                             </button>
+//                         ))}
+//                     </div>
+
+//                     <div className="p-4 sm:p-6">
+//                         {activeTab === 'overview' && (
+//                             <motion.div
+//                                 initial={{ opacity: 0, y: 8 }}
+//                                 animate={{ opacity: 1, y: 0 }}
+//                                 className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5"
+//                             >
+//                                 <div className="space-y-3">
+//                                     <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+//                                         <FiUser className="text-blue-600" /> Contact Information
+//                                     </h3>
+//                                     <InfoRow icon={<FiMail size={16} />} label="Email" value={employee.email} />
+//                                     <InfoRow icon={<FiPhone size={16} />} label="Mobile" value={employee.mobile_number} />
+//                                     <InfoRow icon={<FiUser size={16} />} label="Full Name" value={employee.full_name} />
+//                                     <InfoRow icon={<FiHash size={16} />} label="Employee Code" value={employee.employee_code} />
+//                                 </div>
+
+//                                 <div className="space-y-3">
+//                                     <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+//                                         <FiBriefcase className="text-blue-600" /> Role &amp; Account
+//                                     </h3>
+//                                     <InfoRow icon={<FiBriefcase size={16} />} label="Employee Type" value={EMPLOYEE_TYPE_LABELS[employee.employee_type]} />
+//                                     <InfoRow icon={<FiShield size={16} />} label="Seller" value={employee.seller_id?.business_name} />
+//                                     <InfoRow icon={<FiBriefcase size={16} />} label="Department" value={employee.department} />
+//                                     <InfoRow icon={<FiUser size={16} />} label="Designation" value={employee.designation} />
+//                                     <InfoRow icon={<FiActivity size={16} />} label="Status" value={employee.status} />
+//                                     <InfoRow icon={<FiCalendar size={16} />} label="Joined On" value={employee.created_at ? new Date(employee.created_at).toLocaleString() : null} />
+//                                     <InfoRow icon={<FiClock size={16} />} label="Last Updated" value={employee.updated_at ? new Date(employee.updated_at).toLocaleString() : null} />
+//                                 </div>
+//                             </motion.div>
+//                         )}
+
+//                         {activeTab === 'activity' && (
+//                             <motion.div
+//                                 initial={{ opacity: 0, y: 8 }}
+//                                 animate={{ opacity: 1, y: 0 }}
+//                                 className="space-y-3"
+//                             >
+//                                 <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-1">
+//                                     <FiClock className="text-blue-600" /> Status History
+//                                 </h3>
+
+//                                 {employee.status_history && employee.status_history.length > 0 ? (
+//                                     [...employee.status_history].reverse().map((h, idx) => (
+//                                         <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-sky-50/60 hover:bg-sky-50 transition-colors">
+//                                             <div className="mt-0.5 p-2 bg-white rounded-lg border border-sky-100 shrink-0">
+//                                                 <FiCheckCircle size={14} className="text-sky-600" />
+//                                             </div>
+//                                             <div className="flex-1 min-w-0">
+//                                                 <p className="text-sm">
+//                                                     <span className="font-semibold capitalize text-slate-700">{h.from || 'none'}</span>
+//                                                     <span className="mx-1.5 text-slate-400">→</span>
+//                                                     <span className="font-semibold capitalize text-blue-600">{h.to}</span>
+//                                                 </p>
+//                                                 {h.reason && (
+//                                                     <p className="mt-1 text-xs text-slate-600">
+//                                                         <span className="font-medium">Reason:</span> {h.reason}
+//                                                     </p>
+//                                                 )}
+//                                                 {h.notes && (
+//                                                     <p className="mt-0.5 text-xs text-slate-500">
+//                                                         <span className="font-medium">Notes:</span> {h.notes}
+//                                                     </p>
+//                                                 )}
+//                                                 <p className="mt-1 text-[11px] text-slate-400">
+//                                                     {new Date(h.changed_at).toLocaleString()}
+//                                                     {h.changed_by?.email && ` • by ${h.changed_by.email}`}
+//                                                 </p>
+//                                             </div>
+//                                         </div>
+//                                     ))
+//                                 ) : (
+//                                     <div className="text-center py-8">
+//                                         <FiClock size={32} className="mx-auto text-slate-300 mb-2" />
+//                                         <p className="text-sm text-slate-500">No activity yet</p>
+//                                     </div>
+//                                 )}
+//                             </motion.div>
+//                         )}
+//                     </div>
+//                 </div>
+//             </div>
+//         </div>
+//     );
+// };
+
+// export default EmployeeDetails;
+
+
+
+
+
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
-    FiArrowLeft, FiUser, FiMail, FiPhone, FiBriefcase,
-    FiCheckCircle, FiXCircle, FiClock, FiEdit2, FiTrash2, FiUserCheck, FiUserX,
-    FiRefreshCw, FiTrendingUp, FiShield, FiFileText,
+    FiUser, FiMail, FiPhone, FiBriefcase, FiHash, FiClock, FiCalendar,
+    FiEdit2, FiAlertCircle, FiRefreshCw, FiActivity, FiShield, FiCheckCircle
 } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 import ApiService from '../../../api/ApiService';
 import AdminTopbar from '../../../components/admin/AdminTopbar';
-import ConfirmDialog from '../../../components/common/ConfirmDialog';
 
+const EMPLOYEE_TYPE_LABELS = {
+    manager: 'Manager',
+    product_manager: 'Product Manager',
+    order_manager: 'Order Manager',
+    inventory_manager: 'Inventory Manager',
+    support_staff: 'Support Staff',
+    account_manager: 'Account Manager'
+};
+
+// ================= INFO ROW =================
+const InfoRow = ({ icon, label, value }) => (
+    <div className="flex items-start gap-3 p-3 rounded-xl bg-sky-50/60 hover:bg-sky-50 transition-colors min-w-0">
+        <div className="mt-0.5 text-sky-600 shrink-0">{icon}</div>
+        <div className="min-w-0">
+            <p className="text-xs text-slate-600 mb-0.5">{label}</p>
+            <p className="text-sm font-medium text-slate-900 break-words">{value || 'Not available'}</p>
+        </div>
+    </div>
+);
+
+// ================= STAT CARD =================
+const StatCard = ({ icon, title, value, subtext, color }) => (
+    <div className="bg-white rounded-2xl p-3 sm:p-4 border border-sky-100 shadow-sm flex flex-col min-w-0">
+        <div className="flex items-start justify-between gap-2 mb-2">
+            <p className="text-[11px] sm:text-xs font-medium text-slate-600 leading-tight">
+                {title}
+            </p>
+            <div className={`p-2 rounded-lg shrink-0 ${color}`}>
+                {icon}
+            </div>
+        </div>
+
+        <h3 className="text-sm sm:text-base font-bold text-slate-900 capitalize leading-snug break-words">
+            {value || '—'}
+        </h3>
+
+        {subtext && (
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1">
+                {subtext}
+            </p>
+        )}
+    </div>
+);
+
+// ================= MAIN COMPONENT =================
 const EmployeeDetails = () => {
-    const { employeeId } = useParams();
+    const { employeeCode } = useParams();
     const navigate = useNavigate();
+
     const [employee, setEmployee] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [performance, setPerformance] = useState(null);
-    const [sellers, setSellers] = useState([]);
-    const [careerHistory, setCareerHistory] = useState([]);
-    const [deleteConfirm, setDeleteConfirm] = useState({ open: false });
-    const [statusConfirm, setStatusConfirm] = useState({ open: false, action: 'activate' });
+    const [refreshing, setRefreshing] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
+    const [activeTab, setActiveTab] = useState('overview');
 
-    useEffect(() => {
-        fetchEmployeeDetails();
-    }, [employeeId]);
+    const fetchData = useCallback(async (silent = false) => {
+        if (!employeeCode) {
+            setErrorMsg('No employee code in URL');
+            setLoading(false);
+            return;
+        }
 
-    const fetchEmployeeDetails = async () => {
-        setLoading(true);
+        if (!silent) setLoading(true);
+        else setRefreshing(true);
+
+        setErrorMsg('');
         try {
-            const [empRes, perfRes, sellerRes, historyRes] = await Promise.all([
-                ApiService.getEmployeeById(employeeId),
-                ApiService.getEmployeePerformance(employeeId, { period: 'monthly' }),
-                ApiService.getEmployeeSellers(employeeId),
-                ApiService.getEmployeeCareerHistory(employeeId, { page: 1, limit: 10 }),
-            ]);
-            if (empRes.data.success) setEmployee(empRes.data.data);
-            if (perfRes.data.success) setPerformance(perfRes.data.data);
-            if (sellerRes.data.success) setSellers(sellerRes.data.data?.current_sellers || []);
-            if (historyRes.data.success) setCareerHistory(historyRes.data.data || []);
+            const res = await ApiService.getEmployeeByCode(employeeCode);
+            const data = res?.data?.data?.employee || null;
+
+            if (!data) {
+                setEmployee(null);
+                setErrorMsg('Employee not found');
+            } else {
+                setEmployee({ ...data });
+                if (silent) toast.success('Data refreshed');
+            }
         } catch (error) {
-            toast.error('Failed to load employee details');
-            navigate('/admin/employees');
+            setErrorMsg(error?.response?.data?.message || 'Failed to load');
+            setEmployee(null);
+            if (silent) toast.error('Failed to refresh');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    };
+    }, [employeeCode]);
 
-    const confirmStatusToggle = async () => {
-        const newStatus = statusConfirm.action === 'activate' ? 'active' : 'inactive';
-        setEmployee(prev => prev ? { ...prev, status: newStatus } : prev);
-        try {
-            await ApiService.updateEmployeeStatus(employeeId, { status: newStatus });
-            toast.success(`Employee ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
-        } catch (error) {
-            fetchEmployeeDetails();
-            toast.error('Failed to update employee status');
-        } finally {
-            setStatusConfirm({ open: false, action: 'activate' });
-        }
-    };
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    const handleDelete = async () => {
-        try {
-            await ApiService.deleteEmployee(employeeId);
-            toast.success('Employee deleted successfully');
-            navigate('/admin/employees');
-        } catch (error) {
-            toast.error('Failed to delete employee');
-        } finally {
-            setDeleteConfirm({ open: false });
-        }
-    };
+    const initials = (employee?.full_name || 'E')
+        .split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'E';
 
-    const getStatusBadge = (status) => {
-        const config = {
-            active: { color: 'bg-emerald-50 text-emerald-800 border border-emerald-300', icon: FiCheckCircle, label: 'Active' },
-            inactive: { color: 'bg-gray-50 text-gray-700 border border-gray-300', icon: FiXCircle, label: 'Inactive' },
-            pending: { color: 'bg-amber-50 text-amber-800 border border-amber-300', icon: FiClock, label: 'Pending' },
-            blocked: { color: 'bg-orange-50 text-orange-800 border border-orange-300', icon: FiXCircle, label: 'Blocked' },
+    const isActive = String(employee?.status || '').toLowerCase() === 'active';
+
+    const statusBadge = () => {
+        const styles = {
+            active: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            inactive: 'bg-slate-100 text-slate-600 border-slate-200',
+            blocked: 'bg-rose-100 text-rose-700 border-rose-200',
+            pending: 'bg-amber-100 text-amber-700 border-amber-200'
         };
-        const { color, icon: Icon, label } = config[status] || config.pending;
+        const s = employee?.status || 'pending';
         return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${color}`}>
-                <Icon className="w-3 h-3" /> {label}
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border capitalize ${styles[s] || styles.pending}`}>
+                <span className="w-2 h-2 rounded-full bg-current opacity-70" />
+                {s}
             </span>
         );
     };
 
-    if (loading) return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-white flex items-center justify-center"><FiRefreshCw className="animate-spin text-blue-600 w-8 h-8" /></div>;
-    if (!employee) return <div className="text-center py-12 text-gray-500">Employee not found</div>;
+    const roleBadge = () => (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border bg-blue-100 text-blue-700 border-blue-200">
+            <FiBriefcase size={14} />
+            {EMPLOYEE_TYPE_LABELS[employee?.employee_type] || employee?.employee_type || 'Employee'}
+        </span>
+    );
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-white">
-            <AdminTopbar
-                title="Employee Details"
-                subtitle={`${employee.first_name} ${employee.last_name} (${employee.employee_code})`}
-                actions={
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => navigate(`/admin/employees/${employeeId}/edit`)} className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 font-medium rounded-xl hover:bg-blue-50 transition-all shadow-sm">
-                            <FiEdit2 className="w-4 h-4" /> Edit
+    // ================= LOADING =================
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+                    <p className="text-slate-700 font-medium">Loading employee details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // ================= NOT FOUND =================
+    if (!employee) {
+        return (
+            <div className="min-h-screen flex items-center justify-center px-4">
+                <div className="bg-white border border-sky-100 rounded-2xl shadow-sm p-8 max-w-md w-full text-center">
+                    <div className="w-20 h-20 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FiAlertCircle size={38} className="text-sky-500" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">Employee not found</h2>
+                    <p className="text-slate-600 mb-6 text-sm">{errorMsg || 'The requested employee could not be loaded.'}</p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <button onClick={() => fetchData()} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-sky-200 text-slate-800 rounded-xl hover:bg-sky-50 font-medium">
+                            <FiRefreshCw size={16} /> Retry
                         </button>
-                        <button onClick={() => navigate('/admin/employees')} className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 font-medium rounded-xl hover:bg-blue-50 transition-all shadow-sm">
-                            <FiArrowLeft className="w-4 h-4" /> Back to Employees
+                        <button onClick={() => navigate('/admin/employees')} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">
+                            Back to Employees
                         </button>
-                    </div>
-                }
-            />
-
-            <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-6">
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-400 to-sky-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg">
-                                {(employee.first_name?.[0] || 'E').toUpperCase()}
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-3">
-                                    <h2 className="text-2xl font-bold text-gray-900">{employee.first_name} {employee.last_name}</h2>
-                                    {getStatusBadge(employee.status)}
-                                </div>
-                                <p className="text-gray-600 mt-1">{employee.email}</p>
-                                <p className="text-sm text-blue-600 font-semibold mt-1">Employee ID: {employee.employee_code}</p>
-                                <div className="flex items-center gap-4 mt-2">
-                                    <span className="flex items-center gap-1.5 text-sm text-gray-700"><FiBriefcase className="w-4 h-4 text-blue-500" />{employee.employee_type}</span>
-                                    <span className="flex items-center gap-1.5 text-sm text-gray-700"><FiShield className="w-4 h-4 text-purple-500" />{employee.seller?.business_name || 'N/A'}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            {employee.status !== 'active' && <button onClick={() => setStatusConfirm({ open: true, action: 'activate' })} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"><FiUserCheck className="w-4 h-4" /> Activate</button>}
-                            {employee.status === 'active' && <button onClick={() => setStatusConfirm({ open: true, action: 'deactivate' })} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"><FiUserX className="w-4 h-4" /> Deactivate</button>}
-                            <button onClick={() => setDeleteConfirm({ open: true })} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-red-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"><FiTrash2 className="w-4 h-4" /> Delete</button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Performance */}
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><FiTrendingUp className="w-5 h-5 text-blue-600" /> Performance (Monthly)</h3>
-                    {performance ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="p-4 bg-blue-50 rounded-xl"><p className="text-sm text-gray-600">Orders Processed</p><p className="text-2xl font-bold text-gray-900">{performance.total_orders || 0}</p></div>
-                            <div className="p-4 bg-purple-50 rounded-xl"><p className="text-sm text-gray-600">Products Managed</p><p className="text-2xl font-bold text-gray-900">{performance.total_products || 0}</p></div>
-                            <div className="p-4 bg-emerald-50 rounded-xl"><p className="text-sm text-gray-600">Tasks Completed</p><p className="text-2xl font-bold text-gray-900">{performance.total_tasks_completed || 0}</p></div>
-                            <div className="p-4 bg-yellow-50 rounded-xl"><p className="text-sm text-gray-600">Efficiency Score</p><p className="text-2xl font-bold text-gray-900">{performance.efficiency_score || 0}%</p></div>
-                        </div>
-                    ) : <div className="text-center py-6 text-gray-500">No performance data</div>}
-                </div>
-
-                {/* Assigned Sellers */}
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><FiShield className="w-5 h-5 text-blue-600" /> Assigned Sellers</h3>
-                    {sellers.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {sellers.map((seller, idx) => (
-                                <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                    <p className="font-semibold text-gray-900">{seller.business_name}</p>
-                                    <p className="text-xs text-gray-500">{seller.owner_name}</p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : <div className="text-center py-4 text-gray-500">No sellers assigned</div>}
-                </div>
-
-                {/* Career History */}
-                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><FiFileText className="w-5 h-5 text-blue-600" /> Career History</h3>
-                    {careerHistory.length > 0 ? (
-                        <div className="space-y-4">
-                            {careerHistory.map((item, idx) => (
-                                <div key={idx} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                    <div className="p-2 bg-blue-50 rounded-lg"><FiBriefcase className="w-4 h-4 text-blue-600" /></div>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-900">{item.action || item.change_reason}</p>
-                                        <p className="text-xs text-gray-500">{new Date(item.created_at || item.changed_at).toLocaleDateString('en-IN')}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : <div className="text-center py-4 text-gray-500">No career history</div>}
-                </div>
-
-                {/* Contact & Role Info */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><FiUser className="w-5 h-5 text-blue-600" /> Contact Information</h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm text-gray-700"><FiMail className="w-4 h-4 text-gray-400" /> {employee.email}</div>
-                            <div className="flex items-center gap-2 text-sm text-gray-700"><FiPhone className="w-4 h-4 text-gray-400" /> {employee.mobile_number || 'N/A'}</div>
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6">
-                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><FiBriefcase className="w-5 h-5 text-blue-600" /> Role & Assignment</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><p className="text-xs text-gray-500">Role</p><p className="text-sm font-medium text-gray-900 capitalize">{employee.employee_type || 'N/A'}</p></div>
-                            <div><p className="text-xs text-gray-500">Seller</p><p className="text-sm font-medium text-gray-900">{employee.seller?.business_name || 'N/A'}</p></div>
-                        </div>
                     </div>
                 </div>
             </div>
+        );
+    }
 
-            <ConfirmDialog isOpen={deleteConfirm.open} onClose={() => setDeleteConfirm({ open: false })} onConfirm={handleDelete} title="Delete Employee" message="Are you sure you want to delete this employee? This action cannot be undone." confirmText="Delete" confirmColor="bg-gradient-to-r from-rose-500 to-red-600" />
-            <ConfirmDialog isOpen={statusConfirm.open} onClose={() => setStatusConfirm({ open: false, action: 'activate' })} onConfirm={confirmStatusToggle} title={statusConfirm.action === 'activate' ? 'Activate Employee' : 'Deactivate Employee'} message={`Are you sure you want to ${statusConfirm.action === 'activate' ? 'activate' : 'deactivate'} this employee?`} confirmText={statusConfirm.action === 'activate' ? 'Activate' : 'Deactivate'} confirmColor={statusConfirm.action === 'activate' ? 'bg-gradient-to-r from-emerald-500 to-green-600' : 'bg-gradient-to-r from-orange-500 to-amber-600'} />
+    const tabs = [
+        { id: 'overview', label: 'Overview', icon: <FiUser size={16} /> },
+        { id: 'activity', label: 'Activity', icon: <FiActivity size={16} /> }
+    ];
+
+    // ================= RENDER =================
+    return (
+        <div className="min-h-screen from-sky-50 via-[#eaf4ff] to-white pb-10">
+
+            <AdminTopbar
+                title="Employee Details"
+                subtitle={employee.full_name}
+                actions={
+                    <>
+                        <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); fetchData(true); }}
+                            disabled={refreshing}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-sky-300 hover:bg-sky-50 sm:px-4 disabled:opacity-60"
+                        >
+                            <FiRefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+                            Refresh
+                        </button>
+                        <button
+                            onClick={() => navigate(`/admin/employees/${employeeCode}/edit`)}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl hover:shadow-lg text-sm font-semibold transition-all"
+                            style={{
+                                background: 'linear-gradient(to right, #2563eb, #0ea5e9)',
+                                color: '#ffffff',
+                                boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)'
+                            }}
+                        >
+                            <FiEdit2 size={16} />
+                            <span>Edit</span>
+                        </button>
+                    </>
+                }
+            />
+
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
+
+                {/* PROFILE CARD */}
+                <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+                    <div className="h-1.5 bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-500" />
+
+                    <div className="p-5 sm:p-6">
+                        {/* MOBILE */}
+                        <div className="flex flex-col lg:hidden">
+                            <div className="flex justify-center">
+                                <div className="relative shrink-0">
+                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-lg ring-4 ring-sky-100">
+                                        {initials}
+                                    </div>
+                                    <span className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-4 border-white ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                </div>
+                            </div>
+
+                            <div className="text-center mt-4">
+                                <h2 className="truncate text-xl" style={{ color: '#0f172a', fontWeight: 900, letterSpacing: '-0.02em' }}>
+                                    {employee.full_name || 'Unnamed'}
+                                </h2>
+                                <p className="truncate text-sm mt-1" style={{ color: '#475569' }}>
+                                    {employee.email || 'No email'}
+                                </p>
+                                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                                    {roleBadge()}
+                                    {statusBadge()}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-2 mt-5">
+                                <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl">
+                                    <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                        <FiHash className="w-4 h-4 text-blue-600" />
+                                    </div>
+                                    <div className="min-w-0 text-start ml-2.5">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Employee Code</p>
+                                        <p className="text-sm font-mono font-bold truncate" style={{ color: '#1d4ed8' }}>
+                                            {employee.employee_code || employeeCode}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {employee.created_at && (
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                            <FiClock className="w-4 h-4 text-slate-600" />
+                                        </div>
+                                        <div className="min-w-0 text-start ml-2.5">
+                                            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Joined</p>
+                                            <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>
+                                                {new Date(employee.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* DESKTOP */}
+                        <div className="hidden lg:flex lg:items-center gap-6">
+                            <div className="relative shrink-0">
+                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-3xl font-black shadow-lg ring-4 ring-sky-100">
+                                    {initials}
+                                </div>
+                                <span className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-4 border-white ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                            </div>
+
+                            <div className="min-w-0 flex-1 flex flex-col items-center justify-center gap-2 text-center">
+                                <h2 className="truncate text-2xl" style={{ color: '#0f172a', fontWeight: 900, letterSpacing: '-0.02em' }}>
+                                    {employee.full_name || 'Unnamed'}
+                                </h2>
+                                <p className="truncate text-sm mt-1" style={{ color: '#475569' }}>
+                                    {employee.email || 'No email'}
+                                </p>
+                                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                                    {roleBadge()}
+                                    {statusBadge()}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-2 w-64 shrink-0">
+                                <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl">
+                                    <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                        <FiHash className="w-4 h-4 text-blue-600" />
+                                    </div>
+                                    <div className="min-w-0 text-start ml-2.5">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Employee Code</p>
+                                        <p className="text-sm font-mono font-bold truncate" style={{ color: '#1d4ed8' }}>
+                                            {employee.employee_code || employeeCode}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {employee.created_at && (
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+                                            <FiClock className="w-4 h-4 text-slate-600" />
+                                        </div>
+                                        <div className="min-w-0 text-start ml-2.5">
+                                            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#64748b' }}>Joined</p>
+                                            <p className="text-sm font-semibold truncate" style={{ color: '#0f172a' }}>
+                                                {new Date(employee.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* STATS */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                    <StatCard
+                        icon={<FiBriefcase size={20} className="text-indigo-600" />}
+                        title="Employee Type"
+                        value={EMPLOYEE_TYPE_LABELS[employee.employee_type] || employee.employee_type || '—'}
+                        subtext="Role"
+                        color="bg-indigo-100"
+                    />
+                    <StatCard
+                        icon={<FiActivity size={20} className="text-sky-600" />}
+                        title="Status"
+                        value={employee.status || 'unknown'}
+                        subtext="Account state"
+                        color="bg-sky-100"
+                    />
+                    <StatCard
+                        icon={<FiShield size={20} className="text-blue-600" />}
+                        title="Seller"
+                        value={employee.seller_id?.business_name || '—'}
+                        subtext="Belongs to"
+                        color="bg-blue-100"
+                    />
+                    <StatCard
+                        icon={<FiUser size={20} className="text-emerald-600" />}
+                        title="Department"
+                        value={employee.department || '—'}
+                        subtext="Assigned to"
+                        color="bg-emerald-100"
+                    />
+                </div>
+
+                {/* TABS */}
+                <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-1 sm:gap-2 p-3 sm:p-4 border-b border-sky-100 overflow-x-auto">
+                        {tabs.map((t) => (
+                            <button
+                                key={t.id}
+                                onClick={() => setActiveTab(t.id)}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${activeTab === t.id
+                                        ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-200'
+                                        : 'text-slate-700 hover:bg-sky-50'
+                                    }`}
+                            >
+                                {t.icon} {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    
+                    <div className="p-4 sm:p-6">
+                        {/* Overview Tab */}
+                        {activeTab === 'overview' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5"
+                            >
+                                <div className="space-y-3 text-start">
+                                    <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                                        <FiUser className="text-blue-600" /> Contact Information
+                                    </h3>
+                                    <InfoRow icon={<FiMail size={16} />} label="Email" value={employee.email} />
+                                    <InfoRow icon={<FiPhone size={16} />} label="Mobile" value={employee.mobile_number} />
+                                    <InfoRow icon={<FiUser size={16} />} label="Full Name" value={employee.full_name} />
+                                    <InfoRow icon={<FiHash size={16} />} label="Employee Code" value={employee.employee_code} />
+                                </div>
+
+                                <div className="space-y-3 text-start">
+                                    <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                                        <FiBriefcase className="text-blue-600" /> Role &amp; Account
+                                    </h3>
+                                    <InfoRow icon={<FiBriefcase size={16} />} label="Employee Type" value={EMPLOYEE_TYPE_LABELS[employee.employee_type]} />
+                                    <InfoRow icon={<FiShield size={16} />} label="Seller" value={employee.seller_id?.business_name} />
+                                    <InfoRow icon={<FiBriefcase size={16} />} label="Department" value={employee.department} />
+                                    <InfoRow icon={<FiUser size={16} />} label="Designation" value={employee.designation} />
+                                    <InfoRow icon={<FiActivity size={16} />} label="Status" value={employee.status} />
+                                    <InfoRow icon={<FiCalendar size={16} />} label="Joined On" value={employee.created_at ? new Date(employee.created_at).toLocaleString() : null} />
+                                    <InfoRow icon={<FiClock size={16} />} label="Last Updated" value={employee.updated_at ? new Date(employee.updated_at).toLocaleString() : null} />
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Activity Tab */}
+                        {activeTab === 'activity' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="space-y-3"
+                            >
+                                <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-1">
+                                    <FiClock className="text-blue-600" /> Status History
+                                </h3>
+
+                                {employee.status_history && employee.status_history.length > 0 ? (
+                                    [...employee.status_history].reverse().map((h, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-sky-50/60 hover:bg-sky-50 transition-colors">
+                                            <div className="mt-0.5 p-2 bg-white rounded-lg border border-sky-100 shrink-0">
+                                                <FiCheckCircle size={14} className="text-sky-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm">
+                                                    <span className="font-semibold capitalize text-slate-700">{h.from || 'none'}</span>
+                                                    <span className="mx-1.5 text-slate-400">→</span>
+                                                    <span className="font-semibold capitalize text-blue-600">{h.to}</span>
+                                                </p>
+                                                {h.reason && (
+                                                    <p className="mt-1 text-xs text-slate-600">
+                                                        <span className="font-medium">Reason:</span> {h.reason}
+                                                    </p>
+                                                )}
+                                                {h.notes && (
+                                                    <p className="mt-0.5 text-xs text-slate-500">
+                                                        <span className="font-medium">Notes:</span> {h.notes}
+                                                    </p>
+                                                )}
+                                                <p className="mt-1 text-[11px] text-slate-400">
+                                                    {new Date(h.changed_at).toLocaleString()}
+                                                    {h.changed_by?.email && ` • by ${h.changed_by.email}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <FiClock size={32} className="mx-auto text-slate-300 mb-2" />
+                                        <p className="text-sm text-slate-500">No activity yet</p>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
