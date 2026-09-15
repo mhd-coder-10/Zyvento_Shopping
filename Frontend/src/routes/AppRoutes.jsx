@@ -84,7 +84,7 @@ import SellerEdit from '../pages/admin/sellers/SellerEdit';
 
 import SubAdminList from '../pages/admin/sub-admins/SubAdminList';
 import SubAdminDetails from '../pages/admin/sub-admins/SubAdminDetails';
-import SubAdminEdit from '../pages/admin/sub-admins/SubAdminEdit';
+import SubAdminManagement from '../pages/admin/sub-admins/SubAdminManagement';
 
 
 // Admin - Employees
@@ -246,8 +246,9 @@ const AppRoutes = () => {
 
                 {/* Sub-Admins  */}
                 <Route path="/admin/sub-admins" element={<SubAdminList />} />
+                <Route path="/admin/sub-admins/create" element={<SubAdminManagement/>} />
                 <Route path="/admin/sub-admins/:subAdminCode" element={<SubAdminDetails />} />
-                <Route path="/admin/sub-admins/:subAdminCode/edit" element={<SubAdminEdit />} />
+                <Route path="/admin/sub-admins/:subAdminCode/edit" element={<SubAdminManagement/>} />
 
                 {/* Employees */}
                 <Route path="/admin/employees" element={<EmployeeList />} />

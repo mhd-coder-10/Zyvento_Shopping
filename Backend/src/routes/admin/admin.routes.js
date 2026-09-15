@@ -11,6 +11,8 @@ const auth = require('../../middleware/auth.middleware');
 const { checkSellerAccess, authorize, checkSubAdminAccess, checkPermission } = require('../../middleware/authorization.middleware');
 const { validate } = require('../../middleware/validation.middleware');
 const adminValidation = require('../../validations/admin.validation');
+const auditService = require("../../services/audit.service");
+
 
 /**
  * @swagger
@@ -247,6 +249,13 @@ router.delete(
 
 // ============== SUB-ADMIN ROUTES ==================
 
+// Get available users for Sub-Admin creation
+router.get(
+    '/sub-admins/available-users',
+    checkPermission('manage_sub_admins'),
+    adminController.getAvailableUsersForSubAdmin
+);
+
 // Get all Sub-Admins
 router.get(
     '/sub-admins',
@@ -261,15 +270,6 @@ router.get(
     '/sub-admins/stats',
     checkPermission('manage_sub_admins'),
     adminController.getSubAdminStats
-);
-
-// Get deleted Sub-Admins
-// Must be before /sub-admins/:subAdminCode to avoid matching "deleted" as a code
-router.get(
-    '/sub-admins/deleted',
-    checkPermission('manage_sub_admins'),
-    validate(adminValidation.getDeletedSubAdmins, 'query'),
-    adminController.getDeletedSubAdmins
 );
 
 // Create Sub-Admin
@@ -330,185 +330,6 @@ router.get(
     validate(adminValidation.subAdminCodeParam, 'params'),
     adminController.getSubAdminByCode
 );
-
-
-// ============ REVIEW MANAGEMENT ROUTES ============
-
-// Get Review Stats
-router.get(
-    '/reviews/stats',
-    checkPermission('manage_reviews'),
-    adminController.getReviewStats
-);
-
-// List All Reviews
-router.get(
-    '/reviews',
-    checkPermission('manage_reviews'),
-    validate(adminValidation.adminGetReviews),
-    adminController.getAllReviews
-);
-
-// Get Review Details
-router.get(
-    '/reviews/:reviewId',
-    checkPermission('manage_reviews'),
-    validate(adminValidation.adminReviewIdParam),
-    adminController.getReviewById
-);
-
-// Moderate Review
-router.put(
-    '/reviews/:reviewId/moderate',
-    checkPermission('manage_reviews'),
-    validate(adminValidation.adminModerateReview),
-    adminController.moderateReview
-);
-
-
-
-
-
-// // ============ EMPLOYEE MANAGEMENT ============
-
-// // Employee Stats
-// router.get(
-//     '/employees/stats',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeeStats
-// );
-
-// // Export Employees
-// router.get(
-//     '/employees/export',
-//     checkPermission('manage_employees'),
-//     adminController.exportEmployees);
-
-// // Get All Employees
-// router.get(
-//     '/employees',
-//     checkPermission('manage_employees'),
-//     adminController.getAllEmployees
-// );
-
-// // Create Employee
-// router.post(
-//     '/employees',
-//     checkPermission('manage_employees'),
-//     validate(adminValidation.createEmployee),
-//     adminController.createEmployee
-// );
-
-// // Transfer Employee to Another Seller
-// router.put(
-//     '/employees/:employeeId/transfer',
-//     checkPermission('manage_employees'),
-//     validate(adminValidation.transferEmployee),
-//     adminController.transferEmployeeToSeller
-// );
-
-// // Upload Profile Image
-// router.post(
-//     '/employees/:employeeId/profile-image',
-//     checkPermission('manage_employees'),
-//     adminController.uploadEmployeeProfileImage
-// );
-
-// // Get Employee by ID
-// router.get(
-//     '/employees/:employeeId',
-//     checkPermission('manage_employees'),
-//     validate(adminValidation.employeeIdParam),
-//     adminController.getEmployeeById
-// );
-
-// // Update Employee
-// router.put(
-//     '/employees/:employeeId',
-//     checkPermission('manage_employees'),
-//     validate(adminValidation.updateEmployee),
-//     adminController.updateEmployee
-// );
-
-// // Delete Employee
-// router.delete(
-//     '/employees/:employeeId',
-//     checkPermission('manage_employees'),
-//     validate(adminValidation.employeeIdParam),
-//     adminController.deleteEmployee
-// );
-
-// // Update Employee Status
-// router.patch(
-//     '/employees/:employeeId/status',
-//     checkPermission('manage_employees'),
-//     validate(adminValidation.updateEmployeeStatus),
-//     adminController.updateEmployeeStatus
-// );
-
-// // Get Employee Performance
-// router.get(
-//     '/employees/:employeeId/performance',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeePerformance
-// );
-
-// //  Get Employee Transactions
-// router.get(
-//     '/employees/:employeeId/transactions',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeeTransactions
-// );
-
-// //  Get Employee Sellers (Current & Past)
-// router.get(
-//     '/employees/:employeeId/sellers',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeeSellers
-// );
-
-// //  Get Employee Career History
-// router.get(
-//     '/employees/:employeeId/career-history',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeeCareerHistory
-// );
-
-// //  Get Employee Reports (Filter by Month/Year)
-// router.get(
-//     '/employees/:employeeId/reports',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeeReports
-// );
-
-// // Get Employee Roles
-// router.get(
-//     '/employees/:employeeId/roles',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeeRoles
-// );
-
-// // Assign Role to Employee
-// router.post(
-//     '/employees/:employeeId/roles',
-//     checkPermission('manage_employees'),
-//     adminController.assignEmployeeRole
-// );
-
-// // Remove Role from Employee
-// router.delete(
-//     '/employees/:employeeId/roles/:roleId',
-//     checkPermission('manage_employees'),
-//     adminController.removeEmployeeRole
-// );
-
-// // Get Employee Activity Logs
-// router.get(
-//     '/employees/:employeeId/activity-logs',
-//     checkPermission('manage_employees'),
-//     adminController.getEmployeeActivityLogs
-// );
-
 
 // ============ EMPLOYEE ROUTES ============
 
@@ -591,6 +412,41 @@ router.get(
     validate(adminValidation.employeeCodeParam, 'params'),
     adminController.getEmployeeByCode
 );
+
+
+// ============ REVIEW MANAGEMENT ROUTES ============
+
+// Get Review Stats
+router.get(
+    '/reviews/stats',
+    checkPermission('manage_reviews'),
+    adminController.getReviewStats
+);
+
+// List All Reviews
+router.get(
+    '/reviews',
+    checkPermission('manage_reviews'),
+    validate(adminValidation.adminGetReviews),
+    adminController.getAllReviews
+);
+
+// Get Review Details
+router.get(
+    '/reviews/:reviewId',
+    checkPermission('manage_reviews'),
+    validate(adminValidation.adminReviewIdParam),
+    adminController.getReviewById
+);
+
+// Moderate Review
+router.put(
+    '/reviews/:reviewId/moderate',
+    checkPermission('manage_reviews'),
+    validate(adminValidation.adminModerateReview),
+    adminController.moderateReview
+);
+
 
 
 

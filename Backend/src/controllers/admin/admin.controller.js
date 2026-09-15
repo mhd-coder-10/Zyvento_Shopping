@@ -1106,6 +1106,12 @@ const adminController = {
         );
     }),
 
+    // Get available users for Sub-Admin creation
+    getAvailableUsersForSubAdmin: asyncHandler(async (req, res) => {
+        const result = await adminService.getAvailableUsersForSubAdmin(req.query);
+        res.status(200).json(ApiResponse.success(result, 'Available users fetched'));
+    }),
+
     // Create Sub-Admin
     createSubAdmin: asyncHandler(async (req, res) => {
         const result = await adminService.createSubAdmin(req.body, req.userId);
@@ -1244,9 +1250,126 @@ const adminController = {
         );
     }),
 
+    // ============ EMPLOYEE CONTROLLERS ============
 
+    // Get Employee Stats
+    getEmployeeStats: asyncHandler(async (req, res) => {
+        const stats = await adminService.getEmployeeStats();
+        res.status(200).json(ApiResponse.success(stats, 'Employee stats fetched'));
+    }),
 
+    // Get All Employee
+    getAllEmployees: asyncHandler(async (req, res) => {
+        const result = await adminService.getAllEmployees(req.query);
+        res.status(200).json(ApiResponse.success(result, 'Employees fetched'));
+    }),
 
+    // Get Availabe Users for Employe
+    getAvailableUsersForEmployee: asyncHandler(async (req, res) => {
+        const result = await adminService.getAvailableUsersForEmployee(req.query);
+        res.status(200).json(ApiResponse.success(result, 'Available users fetched'));
+    }),
+
+    // Get Delete Employee
+    getDeletedEmployees: asyncHandler(async (req, res) => {
+        const result = await adminService.getDeletedEmployees(req.query);
+        res.status(200).json(ApiResponse.success(result, 'Deleted employees fetched'));
+    }),
+
+    // Get Employee By Code
+    getEmployeeByCode: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;
+        const result = await adminService.getEmployeeByCode(employeeCode);
+        res.status(200).json(ApiResponse.success(result, 'Employee fetched'));
+    }),
+
+    // Create Employee
+    createEmployee: asyncHandler(async (req, res) => {
+        const result = await adminService.createEmployee(req.body, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'create', module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${result.employee.employee_code} created`,
+            newData: { employee_type: result.employee.employee_type },
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(201).json(ApiResponse.success(result, 'Employee created'));
+    }),
+
+    // Update Employee
+    updateEmployee: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;
+        const result = await adminService.updateEmployee(employeeCode, req.body, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'update', module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${employeeCode} updated`,
+            newData: req.body,
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(200).json(ApiResponse.success(result, 'Employee updated'));
+    }),
+
+    // updateEmployeeStatus
+    updateEmployeeStatus: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;        // 👈 employeeId → employeeCode
+        const { status, reason, notes } = req.body; // 👈 notes bhi include karo
+
+        const result = await adminService.updateEmployeeStatus(
+            employeeCode,
+            { status, reason, notes },
+            req.userId
+        );
+
+        await auditService.log({
+            userId: req.userId,
+            action: 'status_change',
+            module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${employeeCode} status changed to ${status}`,
+            newData: { status, reason },
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            status: 'success'
+        });
+
+        res.status(200).json(
+            ApiResponse.success(result, `Status updated to ${status}`)
+        );
+    }),
+
+    // Delete Employee
+    deleteEmployee: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;
+        await adminService.deleteEmployee(employeeCode, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'delete', module: 'employee',
+            description: `Employee ${employeeCode} deleted`,
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(200).json(ApiResponse.success(null, 'Employee deleted'));
+    }),
+
+    // Restore Employee
+    restoreEmployee: asyncHandler(async (req, res) => {
+        const { employeeCode } = req.params;
+        const result = await adminService.restoreEmployee(employeeCode, req.userId);
+
+        await auditService.log({
+            userId: req.userId, action: 'restore', module: 'employee',
+            moduleId: result.employee._id,
+            description: `Employee ${employeeCode} restored`,
+            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
+        });
+
+        res.status(200).json(ApiResponse.success(result, 'Employee restored. Activate manually.'));
+    }),
 
     // ============ REVIEW MANAGEMENT CONTROLLER ============
 
@@ -1323,121 +1446,6 @@ const adminController = {
 
         res.status(200).json(ApiResponse.success(review, `Review ${action}ed successfully`));
     }),
-
-    
-    // ============ EMPLOYEE CONTROLLERS ============
-
-    getEmployeeStats: asyncHandler(async (req, res) => {
-        const stats = await adminService.getEmployeeStats();
-        res.status(200).json(ApiResponse.success(stats, 'Employee stats fetched'));
-    }),
-
-    getAllEmployees: asyncHandler(async (req, res) => {
-        const result = await adminService.getAllEmployees(req.query);
-        res.status(200).json(ApiResponse.success(result, 'Employees fetched'));
-    }),
-
-    getAvailableUsersForEmployee: asyncHandler(async (req, res) => {
-        const result = await adminService.getAvailableUsersForEmployee(req.query);
-        res.status(200).json(ApiResponse.success(result, 'Available users fetched'));
-    }),
-
-    getDeletedEmployees: asyncHandler(async (req, res) => {
-        const result = await adminService.getDeletedEmployees(req.query);
-        res.status(200).json(ApiResponse.success(result, 'Deleted employees fetched'));
-    }),
-
-    getEmployeeByCode: asyncHandler(async (req, res) => {
-        const { employeeCode } = req.params;
-        const result = await adminService.getEmployeeByCode(employeeCode);
-        res.status(200).json(ApiResponse.success(result, 'Employee fetched'));
-    }),
-
-    createEmployee: asyncHandler(async (req, res) => {
-        const result = await adminService.createEmployee(req.body, req.userId);
-
-        await auditService.log({
-            userId: req.userId, action: 'create', module: 'employee',
-            moduleId: result.employee._id,
-            description: `Employee ${result.employee.employee_code} created`,
-            newData: { employee_type: result.employee.employee_type },
-            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
-        });
-
-        res.status(201).json(ApiResponse.success(result, 'Employee created'));
-    }),
-
-    updateEmployee: asyncHandler(async (req, res) => {
-        const { employeeCode } = req.params;
-        const result = await adminService.updateEmployee(employeeCode, req.body, req.userId);
-
-        await auditService.log({
-            userId: req.userId, action: 'update', module: 'employee',
-            moduleId: result.employee._id,
-            description: `Employee ${employeeCode} updated`,
-            newData: req.body,
-            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
-        });
-
-        res.status(200).json(ApiResponse.success(result, 'Employee updated'));
-    }),
-
-    // updateEmployeeStatus
-    updateEmployeeStatus: asyncHandler(async (req, res) => {
-        const { employeeCode } = req.params;        // 👈 employeeId → employeeCode
-        const { status, reason, notes } = req.body; // 👈 notes bhi include karo
-
-        const result = await adminService.updateEmployeeStatus(
-            employeeCode,
-            { status, reason, notes },
-            req.userId
-        );
-
-        await auditService.log({
-            userId: req.userId,
-            action: 'status_change',
-            module: 'employee',
-            moduleId: result.employee._id,
-            description: `Employee ${employeeCode} status changed to ${status}`,
-            newData: { status, reason },
-            ip: req.ip,
-            userAgent: req.get('user-agent'),
-            status: 'success'
-        });
-
-        res.status(200).json(
-            ApiResponse.success(result, `Status updated to ${status}`)
-        );
-    }),
-
-
-    deleteEmployee: asyncHandler(async (req, res) => {
-        const { employeeCode } = req.params;
-        await adminService.deleteEmployee(employeeCode, req.userId);
-
-        await auditService.log({
-            userId: req.userId, action: 'delete', module: 'employee',
-            description: `Employee ${employeeCode} deleted`,
-            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
-        });
-
-        res.status(200).json(ApiResponse.success(null, 'Employee deleted'));
-    }),
-
-    restoreEmployee: asyncHandler(async (req, res) => {
-        const { employeeCode } = req.params;
-        const result = await adminService.restoreEmployee(employeeCode, req.userId);
-
-        await auditService.log({
-            userId: req.userId, action: 'restore', module: 'employee',
-            moduleId: result.employee._id,
-            description: `Employee ${employeeCode} restored`,
-            ip: req.ip, userAgent: req.get('user-agent'), status: 'success'
-        });
-
-        res.status(200).json(ApiResponse.success(result, 'Employee restored. Activate manually.'));
-    }),
-
 
 
     // ============ PRODUCT MANAGEMENT ============

@@ -237,13 +237,19 @@ const adminValidation = {
         end_date: Joi.date().optional()
     }),
 
+    getAvailableUsersQuery: Joi.object({
+        search: Joi.string().optional().allow(''),
+        limit: Joi.number().integer().min(1).max(200).default(50)
+    }),
+
     // CREATE SUB-ADMIN
     createSubAdmin: Joi.object({
         user_id: Joi.string()
             .pattern(/^[0-9a-fA-F]{24}$/)
             .required()
             .messages({
-                'string.pattern.base': 'Invalid user ID'
+                'string.pattern.base': 'Invalid user ID',
+                'any.required': 'Please select a user'
             }),
         sub_admin_type: Joi.string()
             .valid('manager', 'finance_manager', 'support_manager', 'seller_manager')
@@ -254,6 +260,14 @@ const adminValidation = {
             .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
             .optional()
             .default([]),
+        password: Joi.string()
+            .min(6)
+            .max(128)
+            .optional()
+            .allow('', null)
+            .messages({
+                'string.min': 'Password must be at least 6 characters'
+            }),
         notes: Joi.string().trim().max(1000).optional().allow('', null)
     }),
 

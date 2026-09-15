@@ -306,6 +306,12 @@ const ApiService = {
 
     // 3 SUB-ADMIN APIs ----------------
 
+    // Get available users for Sub-Admin creation
+    getAvailableUsersForSubAdmin: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/sub-admins/available-users`, { params, headers });
+    },
+
     // Get all sub-admins (paginated + filters)
     getAllSubAdmins: (params = {}) => {
         setAuthHeaders();

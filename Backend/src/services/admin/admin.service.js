@@ -1399,16 +1399,67 @@ class AdminService {
         };
     }
 
-    // Create Sub-Admin
-    async createSubAdmin(data, assignedByUserId) {
-        const { user_id, sub_admin_type, department, designation, notes, current_role_ids = [] } = data;
+    // Get available users for Sub-Admin creation
+    async getAvailableUsersForSubAdmin({ search = '', limit = 50 } = {}) {
+        const and = [
+            {
+                $or: [
+                    { sub_admin_id: null },
+                    { sub_admin_id: { $exists: false } }
+                ]
+            },
+            {
+                user_type: { $nin: ['super_admin', 'sub_admin', 'seller', 'seller_employee'] }
+            }
+        ];
 
+        if (search && search.trim()) {
+            const regex = new RegExp(search.trim(), 'i');
+            and.push({
+                $or: [
+                    { email: regex },
+                    { first_name: regex },
+                    { last_name: regex },
+                    { mobile_number: regex }
+                ]
+            });
+        }
+
+        const users = await User.find({ $and: and })
+            .select('_id first_name last_name email mobile_number user_type account_status')
+            .sort({ created_at: -1 })
+            .limit(Number(limit))
+            .lean();
+
+        return { users, total: users.length };
+    }
+
+    // Create Sub-Admin (from existing User)
+    async createSubAdmin(data, assignedByUserId) {
+        const {
+            user_id,
+            sub_admin_type,
+            department,
+            designation,
+            notes,
+            current_role_ids = [],
+            password  // 👈 Optional password update
+        } = data;
+
+        // Validate user exists
         const user = await User.findById(user_id);
         if (!user) throw ApiError.notFound('User not found');
 
+        // Prevent privileged users
+        if (['super_admin', 'seller', 'seller_employee'].includes(user.user_type)) {
+            throw ApiError.badRequest(`User of type "${user.user_type}" cannot become Sub-Admin`);
+        }
+
+        // Check if already a Sub-Admin
         const existing = await SubAdmin.findOne({ user_id, is_deleted: { $ne: true } });
         if (existing) throw ApiError.badRequest('User is already a Sub-Admin');
 
+        // Validate roles if provided
         if (current_role_ids.length > 0) {
             const roleCount = await Role.countDocuments({ _id: { $in: current_role_ids } });
             if (roleCount !== current_role_ids.length) {
@@ -1416,9 +1467,22 @@ class AdminService {
             }
         }
 
+        // 👇 Update password if provided
+        if (password && password.trim()) {
+            const bcrypt = require('bcryptjs');
+            const hashedPassword = await bcrypt.hash(password.trim(), 10);
+            user.password = hashedPassword;
+        }
+
+        // 👇 Update user type & link
+        user.user_type = 'sub_admin';
+        user.sub_admin_type = sub_admin_type;
+        await user.save();
+
+        // Create SubAdmin
         const subAdmin = await SubAdmin.create({
             sub_admin_code: this._generateSubAdminCode(),
-            user_id,
+            user_id: user._id,
             assigned_by: assignedByUserId,
             email: user.email,
             full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
@@ -1436,7 +1500,9 @@ class AdminService {
                 from: null,
                 to: 'pending',
                 changed_by: assignedByUserId,
-                reason: 'Sub-Admin created'
+                reason: 'Sub-Admin created',
+                notes: '',
+                changed_at: new Date()
             }]
         });
 
@@ -1703,632 +1769,8 @@ class AdminService {
         return subAdmin;
     }
 
-
-
-
-
-
-
-
-    // ============ REVIEW MANAGEMENT SERVICE ============
-
-    // Get All Reviews (with filters)
-    async getAllReviews({
-        page = 1,
-        limit = 10,
-        search = null,
-        status = null,
-        rating = null,
-        sellerId = null,
-        productId = null,
-        reportCountMin = null,
-        sortBy = 'created_at',
-        sortOrder = 'desc',
-    }) {
-
-        const query = { deleted_at: null };
-
-        if (status && status !== 'all') query.status = status;
-        if (rating) query.rating = rating;
-        if (sellerId) query.seller_id = sellerId;
-        if (productId) query.product_id = productId;
-        if (reportCountMin !== null) query.report_count = { $gte: reportCountMin };
-
-        if (search) {
-            query.$or = [
-                { review_code: { $regex: search, $options: 'i' } },
-                { title: { $regex: search, $options: 'i' } },
-                { comment: { $regex: search, $options: 'i' } },
-                { product_code: { $regex: search, $options: 'i' } },
-            ];
-        }
-
-        const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-        const [reviews, total] = await Promise.all([
-            Review.find(query)
-                .populate('user_id', 'first_name last_name email user_code profile_image')
-                .populate('product_id', 'product_name product_code images')
-                .populate('seller_id', 'business_name')
-                .sort(sortOptions)
-                .skip((parseInt(page) - 1) * parseInt(limit))
-                .limit(parseInt(limit))
-                .lean(),
-            Review.countDocuments(query),
-        ]);
-
-        return {
-            reviews,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                totalPages: Math.ceil(total / parseInt(limit)) || 1,
-            },
-        };
-    }
-
-    // Get Review Stats
-    async getReviewStats() {
-        const Review = require('../models/review.model');
-        const [
-            totalReviews,
-            publishedReviews,
-            pendingReviews,
-            flaggedReviews,
-            reportedReviews,
-            hiddenReviews,
-            rejectedReviews,
-            avgRatingAgg,
-        ] = await Promise.all([
-            Review.countDocuments({ deleted_at: null }),
-            Review.countDocuments({ status: 'published', deleted_at: null }),
-            Review.countDocuments({ status: 'pending', deleted_at: null }),
-            Review.countDocuments({ status: 'flagged', deleted_at: null }),
-            Review.countDocuments({ status: 'reported', deleted_at: null }),
-            Review.countDocuments({ status: 'hidden', deleted_at: null }),
-            Review.countDocuments({ status: 'rejected', deleted_at: null }),
-            Review.aggregate([
-                { $match: { deleted_at: null, status: { $in: ['published', 'reported'] } } },
-                { $group: { _id: null, avg: { $avg: '$rating' } } },
-            ]),
-        ]);
-
-        return {
-            totalReviews,
-            publishedReviews,
-            pendingReviews,
-            flaggedReviews,
-            reportedReviews,
-            hiddenReviews,
-            rejectedReviews,
-            averageRating: avgRatingAgg[0]?.avg
-                ? parseFloat(avgRatingAgg[0].avg.toFixed(2))
-                : 0,
-        };
-    }
-
-    // Get Review By ID
-    async getReviewById(reviewId) {
-        const Review = require('../models/review.model');
-        const review = await Review.findById(reviewId)
-            .populate('user_id', 'first_name last_name email user_code profile_image')
-            .populate('product_id', 'product_name product_code images price')
-            .populate('seller_id', 'business_name email')
-            .populate('order_id', 'order_code order_number')
-            .populate('moderated_by', 'first_name last_name')
-            .populate('moderation_history.admin_id', 'first_name last_name');
-
-        if (!review) {
-            throw ApiError.notFound('Review not found');
-        }
-
-        return review;
-    }
-
-    // Moderate Review (Publish/Hide/Reject/Flag)
-    async moderateReview(reviewId, action, reason, adminComment, adminId) {
-        const review = await Review.findById(reviewId);
-        if (!review) {
-            throw ApiError.notFound('Review not found');
-        }
-
-        const previousStatus = review.status;
-        let newStatus = previousStatus;
-
-        switch (action) {
-            case 'publish':
-                newStatus = 'published';
-                review.published_at = new Date();
-                break;
-            case 'hide':
-                newStatus = 'hidden';
-                review.hidden_at = new Date();
-                break;
-            case 'reject':
-                newStatus = 'rejected';
-                review.rejected_at = new Date();
-                break;
-            case 'flag':
-                newStatus = 'flagged';
-                break;
-            case 'unflag':
-                newStatus = 'published';
-                break;
-            default:
-                throw ApiError.badRequest('Invalid moderation action');
-        }
-
-        review.status = newStatus;
-        review.moderation_reason = reason || null;
-        review.admin_comment = adminComment || review.admin_comment;
-        review.moderated_by = adminId;
-        review.moderated_at = new Date();
-
-        // Add to moderation history
-        review.moderation_history.push({
-            action,
-            previous_status: previousStatus,
-            new_status: newStatus,
-            reason: reason || '',
-            admin_id: adminId,
-            timestamp: new Date(),
-        });
-
-        await review.save();
-
-        return review;
-    }
-
-
-
-
-
-
-    // ============ EMPLOYEE MANAGEMENT  ============
-
-    // Get Employee Stats
-    // async getEmployeeStats() {
-    //     const [total, active, inactive, blocked, pending] = await Promise.all([
-    //         Employee.countDocuments(),
-    //         Employee.countDocuments({ status: 'active' }),
-    //         Employee.countDocuments({ status: 'inactive' }),
-    //         Employee.countDocuments({ status: 'blocked' }),
-    //         Employee.countDocuments({ status: 'pending' }),
-    //     ]);
-    //     return { total, active, inactive, blocked, pending };
-    // }
-
-    // // Get All Employees
-    // async getAllEmployees({ page = 1, limit = 10, search = null, status = null, sortBy = 'created_at', sortOrder = 'desc' } = {}) {
-    //     const query = {};
-    //     if (status) query.status = status;
-
-    //     // Search - Only Employee collection fields 
-    //     if (search) {
-    //         const regex = new RegExp(search, 'i');
-    //         query.$or = [
-    //             { employee_code: regex },
-    //             { employee_type: regex },
-    //         ];
-    //     }
-
-    //     const sortOptions = {};
-    //     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    //     const [employees, total] = await Promise.all([
-    //         Employee.find(query)
-    //             .populate('user_id', 'first_name last_name email mobile_number profile_image')
-    //             .populate('seller_id', 'business_name')
-    //             .populate('role_ids', 'name')
-    //             .skip((page - 1) * limit)
-    //             .limit(parseInt(limit))
-    //             .sort(sortOptions),
-    //         Employee.countDocuments(query)
-    //     ]);
-
-    //     // Response structure - data array direct
-    //     return {
-    //         employees,
-    //         pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) }
-    //     };
-    // }
-
-    // // Create Employee (With Auto Employee Code)
-    // async createEmployee(employeeData, adminId) {
-    //     const { user_id, seller_ids, seller_id, employee_type, role_ids, designations, department, joining_date, status, first_name, last_name, email, mobile_number, password } = employeeData;
-
-    //     let user = null;
-    //     if (user_id) {
-    //         user = await User.findById(user_id);
-    //         if (!user) throw ApiError.notFound('User not found');
-    //         // Check if already an employee
-    //         const existingEmp = await Employee.findOne({ user_id });
-    //         if (existingEmp) throw ApiError.conflict('User is already an employee');
-    //     } else {
-    //         // Create new user
-    //         if (!first_name || !last_name || !email || !mobile_number || !password) {
-    //             throw ApiError.validation('Missing required fields for user creation');
-    //         }
-    //         user = new User({
-    //             first_name, last_name, email, mobile_number, password,
-    //             user_type: 'seller_employee'
-    //         });
-    //         await user.save();
-    //     }
-
-    //     // Generate employee code
-    //     const employeeCode = await this.generateEmployeeCode(user.first_name, user.last_name);
-
-    //     const employee = new Employee({
-    //         user_id: user._id,
-    //         employee_code: employeeCode,
-    //         seller_ids: seller_ids || [],
-    //         seller_id: seller_id || null,
-    //         created_by: adminId,
-    //         employee_type,
-    //         role_ids: role_ids || [],
-    //         designations: designations || [],
-    //         department,
-    //         joining_date: joining_date || new Date(),
-    //         status: status || 'active'
-    //     });
-
-    //     await employee.save();
-
-    //     // Update user type
-    //     await User.findByIdAndUpdate(user._id, { user_type: 'seller_employee', employee_id: employee._id });
-
-    //     // Log activity
-    //     await EmployeeActivityLog.create({
-    //         employee_id: employee._id,
-    //         performed_by: adminId,
-    //         action: 'create',
-    //         module_name: 'employee',
-    //         description: `Employee created with code ${employeeCode}`,
-    //         new_data: { employee_type, seller_ids: seller_ids || [] }
-    //     });
-
-    //     return employee.populate('user_id', 'first_name last_name email mobile_number').populate('seller_id', 'business_name');
-    // }
-
-    // // Generate Employee Code
-    // async generateEmployeeCode(firstName, lastName) {
-    //     const baseName = (firstName || 'employee').toLowerCase().replace(/[^a-z0-9]/g, '');
-    //     let code = '';
-    //     let isUnique = false;
-    //     while (!isUnique) {
-    //         const randomNum = Math.floor(1000 + Math.random() * 9000);
-    //         code = `${baseName}${randomNum}`;
-    //         const existing = await Employee.findOne({ employee_code: code });
-    //         if (!existing) isUnique = true;
-    //     }
-    //     return code;
-    // }
-
-    // // Get Employee by ID
-    // async getEmployeeById(employeeId) {
-    //     const employee = await Employee.findById(employeeId)
-    //         .populate('user_id', 'first_name last_name email mobile_number profile_image')
-    //         .populate('seller_ids', 'business_name owner_name email')
-    //         .populate('seller_id', 'business_name owner_name email')
-    //         .populate('role_ids', 'name permissions')
-    //         .populate('created_by', 'first_name last_name email');
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-    //     return employee;
-    // }
-
-    // // Update Employee
-    // async updateEmployee(employeeId, updateData, adminId) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-
-    //     const allowedFields = ['employee_type', 'seller_ids', 'seller_id', 'role_ids', 'designations', 'department', 'joining_date', 'notes', 'status'];
-    //     const filteredData = {};
-    //     for (const field of allowedFields) {
-    //         if (updateData[field] !== undefined) filteredData[field] = updateData[field];
-    //     }
-
-    //     // If seller changed, log to history
-    //     if (filteredData.seller_id && filteredData.seller_id.toString() !== employee.seller_id?.toString()) {
-    //         await EmployeeRoleHistory.create({
-    //             employee_id: employee._id,
-    //             old_role_ids: employee.role_ids,
-    //             new_role_ids: filteredData.role_ids || employee.role_ids,
-    //             changed_by: adminId,
-    //             change_reason: 'Seller changed'
-    //         });
-    //     }
-
-    //     Object.assign(employee, filteredData);
-    //     await employee.save();
-
-    //     // Log activity
-    //     await EmployeeActivityLog.create({
-    //         employee_id: employee._id,
-    //         performed_by: adminId,
-    //         action: 'update',
-    //         module_name: 'employee',
-    //         description: 'Employee updated',
-    //         old_data: employee._doc,
-    //         new_data: filteredData
-    //     });
-
-    //     return employee.populate('user_id', 'first_name last_name email mobile_number').populate('seller_id', 'business_name');
-    // }
-
-    // // Delete Employee
-    // async deleteEmployee(employeeId, adminId) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-
-    //     // Delete related logs
-    //     await EmployeeActivityLog.deleteMany({ employee_id: employeeId });
-    //     await EmployeePermission.deleteMany({ employee_id: employeeId });
-    //     await EmployeeRoleHistory.deleteMany({ employee_id: employeeId });
-
-    //     // Update user
-    //     await User.findByIdAndUpdate(employee.user_id, { user_type: 'customer', employee_id: null, seller_id: null });
-    //     await employee.deleteOne();
-
-    //     return { message: 'Employee deleted successfully' };
-    // }
-
-    // //  Update Employee Status
-    // async updateEmployeeStatus(employeeId, status, reason = null, adminId) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-
-    //     employee.status = status;
-    //     if (reason) employee.notes = reason;
-    //     await employee.save();
-
-    //     // Update user status
-    //     const userStatus = status === 'active' ? 'active' : status === 'inactive' ? 'inactive' : status === 'blocked' ? 'blocked' : 'pending';
-    //     await User.findByIdAndUpdate(employee.user_id, { account_status: userStatus });
-
-    //     // Log activity
-    //     await EmployeeActivityLog.create({
-    //         employee_id: employee._id,
-    //         performed_by: adminId,
-    //         action: 'status_change',
-    //         module_name: 'employee',
-    //         description: `Status changed to ${status}`,
-    //         new_data: { status, reason }
-    //     });
-
-    //     return employee;
-    // }
-
-    // // Transfer Employee to Another Seller
-    // async transferEmployeeToSeller(employeeId, newSellerId, newRoleId = null, newPermissionIds = [], adminId) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-
-    //     const oldSellerId = employee.seller_id || employee.seller_ids[0];
-    //     const oldRoleIds = employee.role_ids;
-
-    //     employee.seller_id = newSellerId;
-    //     employee.seller_ids = [newSellerId];
-    //     if (newRoleId) employee.employee_type = newRoleId;
-    //     if (newPermissionIds.length > 0) employee.role_ids = newPermissionIds;
-    //     employee.updated_by = adminId;
-    //     await employee.save();
-
-    //     // Log seller transfer in history
-    //     await EmployeeRoleHistory.create({
-    //         employee_id: employee._id,
-    //         old_role_ids: oldRoleIds,
-    //         new_role_ids: employee.role_ids,
-    //         changed_by: adminId,
-    //         change_reason: 'Seller transfer'
-    //     });
-
-    //     // Log activity
-    //     await EmployeeActivityLog.create({
-    //         employee_id: employee._id,
-    //         performed_by: adminId,
-    //         action: 'transfer',
-    //         module_name: 'employee',
-    //         description: `Transferred from seller ${oldSellerId} to ${newSellerId}`,
-    //         old_data: { seller_id: oldSellerId },
-    //         new_data: { seller_id: newSellerId, role_ids: employee.role_ids }
-    //     });
-
-    //     return employee.populate('user_id', 'first_name last_name email').populate('seller_id', 'business_name');
-    // }
-
-    // // Export Employees to CSV
-    // async exportEmployees({ search = null, status = null } = {}) {
-    //     const query = {};
-    //     if (status) query.status = status;
-    //     if (search) {
-    //         query.$or = [
-    //             { employee_code: new RegExp(search, 'i') },
-    //             { 'user_id.first_name': new RegExp(search, 'i') },
-    //             { 'user_id.last_name': new RegExp(search, 'i') },
-    //             { 'user_id.email': new RegExp(search, 'i') },
-    //         ];
-    //     }
-
-    //     const employees = await Employee.find(query).populate('user_id', 'first_name last_name email mobile_number').lean();
-    //     const headers = ['Employee Code', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Joined'];
-    //     const csvRows = [headers.join(',')];
-    //     employees.forEach(emp => {
-    //         const row = [
-    //             `"${(emp.employee_code || '').replace(/"/g, '""')}"`,
-    //             `"${(emp.user_id?.first_name || emp.first_name || '').replace(/"/g, '""')} ${(emp.user_id?.last_name || emp.last_name || '').replace(/"/g, '""')}"`,
-    //             `"${(emp.user_id?.email || emp.email || '').replace(/"/g, '""')}"`,
-    //             `"${(emp.user_id?.mobile_number || emp.mobile_number || '').replace(/"/g, '""')}"`,
-    //             `"${(emp.employee_type || '').replace(/"/g, '""')}"`,
-    //             `"${(emp.status || '').replace(/"/g, '""')}"`,
-    //             `"${emp.joining_date ? new Date(emp.joining_date).toLocaleDateString('en-IN') : ''}"`
-    //         ];
-    //         csvRows.push(row.join(','));
-    //     });
-    //     return csvRows.join('\n');
-    // }
-
-    // // Upload Employee Profile Image
-    // async uploadEmployeeProfileImage(employeeId, file) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-    //     if (file) {
-    //         const result = await cloudinaryHelper.uploadFile(file.path, { folder: `employees/${employeeId}/profile`, resource_type: 'image' });
-    //         employee.profile_image = result.url;
-    //         await employee.save();
-    //     }
-    //     return employee;
-    // }
-
-    // // Get Employee Performance
-    // async getEmployeePerformance(employeeId, period = 'monthly') {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-
-    //     const now = new Date();
-    //     let startDate;
-    //     if (period === 'weekly') startDate = new Date(now.setDate(now.getDate() - 7));
-    //     else if (period === 'yearly') startDate = new Date(now.setFullYear(now.getFullYear() - 1));
-    //     else startDate = new Date(now.setMonth(now.getMonth() - 1));
-
-    //     // only order count 
-    //     const orderCount = await Order.countDocuments({
-    //         processed_by: employeeId,
-    //         created_at: { $gte: startDate }
-    //     });
-
-    //     // count action fro activity schema
-    //     const activityCount = await EmployeeActivityLog.countDocuments({
-    //         employee_id: employeeId,
-    //         created_at: { $gte: startDate }
-    //     });
-
-    //     return {
-    //         period,
-    //         total_orders: orderCount,
-    //         total_products: 0, // Agar Product model mein created_by hai toh use karo
-    //         total_activities: activityCount,
-    //         efficiency_score: 78, // Calculate based on your logic
-    //     };
-    // }
-
-    // // Get Employee Transactions
-    // async getEmployeeTransactions(employeeId, { page = 1, limit = 10 } = {}) {
-    //     const [transactions, total] = await Promise.all([
-    //         Transaction.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
-    //         Transaction.countDocuments({ employee_id: employeeId })
-    //     ]);
-    //     return { transactions, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
-    // }
-
-    // // Get Employee Sellers (Current & Past)
-    // async getEmployeeSellers(employeeId) {
-    //     const employee = await Employee.findById(employeeId).populate('seller_ids', 'business_name owner_name email').populate('seller_id', 'business_name owner_name email');
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-    //     return { current_sellers: employee.seller_ids || (employee.seller_id ? [employee.seller_id] : []), past_sellers: [] };
-    // }
-
-    // // Get Employee Career History
-    // async getEmployeeCareerHistory(employeeId, { page = 1, limit = 10 } = {}) {
-    //     const [history, total] = await Promise.all([
-    //         EmployeeRoleHistory.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
-    //         EmployeeRoleHistory.countDocuments({ employee_id: employeeId })
-    //     ]);
-    //     return { history, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
-    // }
-
-    // // Get Employee Reports (Filter by Month/Year)
-    // async getEmployeeReports(employeeId, { month, year, type = 'monthly' } = {}) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-
-    //     let startDate, endDate;
-    //     if (month && year) {
-    //         startDate = new Date(year, month - 1, 1);
-    //         endDate = new Date(year, month, 1);
-    //     } else if (year) {
-    //         startDate = new Date(year, 0, 1);
-    //         endDate = new Date(year + 1, 0, 1);
-    //     } else {
-    //         const now = new Date();
-    //         if (type === 'yearly') startDate = new Date(now.getFullYear(), 0, 1);
-    //         else startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    //         endDate = new Date();
-    //     }
-
-    //     const orders = await Order.countDocuments({
-    //         processed_by: employeeId,
-    //         created_at: { $gte: startDate, $lte: endDate }
-    //     });
-
-    //     const activities = await EmployeeActivityLog.countDocuments({
-    //         employee_id: employeeId,
-    //         created_at: { $gte: startDate, $lte: endDate }
-    //     });
-
-    //     return {
-    //         period: { startDate, endDate },
-    //         total_orders: orders,
-    //         total_activities: activities,
-    //     };
-    // }
-
-    // // Get Employee Roles
-    // async getEmployeeRoles(employeeId) {
-    //     const employee = await Employee.findById(employeeId).populate('role_ids', 'name permissions');
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-    //     return employee.role_ids;
-    // }
-
-    // // Assign Role to Employee
-    // async assignEmployeeRole(employeeId, roleIds, adminId) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-    //     employee.role_ids = roleIds || [];
-    //     await employee.save();
-
-    //     await EmployeeRoleHistory.create({
-    //         employee_id: employee._id,
-    //         old_role_ids: employee.role_ids,
-    //         new_role_ids: roleIds || [],
-    //         changed_by: adminId,
-    //         change_reason: 'Role assigned'
-    //     });
-
-    //     return employee.populate('role_ids', 'name');
-    // }
-
-    // // Remove Role from Employee
-    // async removeEmployeeRole(employeeId, roleId, adminId) {
-    //     const employee = await Employee.findById(employeeId);
-    //     if (!employee) throw ApiError.notFound('Employee not found');
-    //     employee.role_ids = employee.role_ids.filter(r => r.toString() !== roleId);
-    //     await employee.save();
-
-    //     await EmployeeRoleHistory.create({
-    //         employee_id: employee._id,
-    //         old_role_ids: employee.role_ids,
-    //         new_role_ids: employee.role_ids,
-    //         changed_by: adminId,
-    //         change_reason: 'Role removed'
-    //     });
-
-    //     return employee.populate('role_ids', 'name');
-    // }
-
-    // // Get Employee Activity Logs
-    // async getEmployeeActivityLogs(employeeId, { page = 1, limit = 20 } = {}) {
-    //     const [logs, total] = await Promise.all([
-    //         EmployeeActivityLog.find({ employee_id: employeeId }).sort({ created_at: -1 }).skip((page - 1) * limit).limit(parseInt(limit)),
-    //         EmployeeActivityLog.countDocuments({ employee_id: employeeId })
-    //     ]);
-    //     return { logs, pagination: { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / limit) } };
-    // }
-
-
     // =================== EMPLOYEE SERVICE =================
+
     // Helper: Generate Employee Code 
     _generateEmployeeCode() {
         const ts = Date.now().toString(36).toUpperCase();
@@ -2756,6 +2198,176 @@ class AdminService {
     }
 
 
+    // ============ REVIEW MANAGEMENT SERVICE ============
+
+    // Get All Reviews (with filters)
+    async getAllReviews({
+        page = 1,
+        limit = 10,
+        search = null,
+        status = null,
+        rating = null,
+        sellerId = null,
+        productId = null,
+        reportCountMin = null,
+        sortBy = 'created_at',
+        sortOrder = 'desc',
+    }) {
+
+        const query = { deleted_at: null };
+
+        if (status && status !== 'all') query.status = status;
+        if (rating) query.rating = rating;
+        if (sellerId) query.seller_id = sellerId;
+        if (productId) query.product_id = productId;
+        if (reportCountMin !== null) query.report_count = { $gte: reportCountMin };
+
+        if (search) {
+            query.$or = [
+                { review_code: { $regex: search, $options: 'i' } },
+                { title: { $regex: search, $options: 'i' } },
+                { comment: { $regex: search, $options: 'i' } },
+                { product_code: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        const [reviews, total] = await Promise.all([
+            Review.find(query)
+                .populate('user_id', 'first_name last_name email user_code profile_image')
+                .populate('product_id', 'product_name product_code images')
+                .populate('seller_id', 'business_name')
+                .sort(sortOptions)
+                .skip((parseInt(page) - 1) * parseInt(limit))
+                .limit(parseInt(limit))
+                .lean(),
+            Review.countDocuments(query),
+        ]);
+
+        return {
+            reviews,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                totalPages: Math.ceil(total / parseInt(limit)) || 1,
+            },
+        };
+    }
+
+    // Get Review Stats
+    async getReviewStats() {
+        const Review = require('../models/review.model');
+        const [
+            totalReviews,
+            publishedReviews,
+            pendingReviews,
+            flaggedReviews,
+            reportedReviews,
+            hiddenReviews,
+            rejectedReviews,
+            avgRatingAgg,
+        ] = await Promise.all([
+            Review.countDocuments({ deleted_at: null }),
+            Review.countDocuments({ status: 'published', deleted_at: null }),
+            Review.countDocuments({ status: 'pending', deleted_at: null }),
+            Review.countDocuments({ status: 'flagged', deleted_at: null }),
+            Review.countDocuments({ status: 'reported', deleted_at: null }),
+            Review.countDocuments({ status: 'hidden', deleted_at: null }),
+            Review.countDocuments({ status: 'rejected', deleted_at: null }),
+            Review.aggregate([
+                { $match: { deleted_at: null, status: { $in: ['published', 'reported'] } } },
+                { $group: { _id: null, avg: { $avg: '$rating' } } },
+            ]),
+        ]);
+
+        return {
+            totalReviews,
+            publishedReviews,
+            pendingReviews,
+            flaggedReviews,
+            reportedReviews,
+            hiddenReviews,
+            rejectedReviews,
+            averageRating: avgRatingAgg[0]?.avg
+                ? parseFloat(avgRatingAgg[0].avg.toFixed(2))
+                : 0,
+        };
+    }
+
+    // Get Review By ID
+    async getReviewById(reviewId) {
+        const Review = require('../models/review.model');
+        const review = await Review.findById(reviewId)
+            .populate('user_id', 'first_name last_name email user_code profile_image')
+            .populate('product_id', 'product_name product_code images price')
+            .populate('seller_id', 'business_name email')
+            .populate('order_id', 'order_code order_number')
+            .populate('moderated_by', 'first_name last_name')
+            .populate('moderation_history.admin_id', 'first_name last_name');
+
+        if (!review) {
+            throw ApiError.notFound('Review not found');
+        }
+
+        return review;
+    }
+
+    // Moderate Review (Publish/Hide/Reject/Flag)
+    async moderateReview(reviewId, action, reason, adminComment, adminId) {
+        const review = await Review.findById(reviewId);
+        if (!review) {
+            throw ApiError.notFound('Review not found');
+        }
+
+        const previousStatus = review.status;
+        let newStatus = previousStatus;
+
+        switch (action) {
+            case 'publish':
+                newStatus = 'published';
+                review.published_at = new Date();
+                break;
+            case 'hide':
+                newStatus = 'hidden';
+                review.hidden_at = new Date();
+                break;
+            case 'reject':
+                newStatus = 'rejected';
+                review.rejected_at = new Date();
+                break;
+            case 'flag':
+                newStatus = 'flagged';
+                break;
+            case 'unflag':
+                newStatus = 'published';
+                break;
+            default:
+                throw ApiError.badRequest('Invalid moderation action');
+        }
+
+        review.status = newStatus;
+        review.moderation_reason = reason || null;
+        review.admin_comment = adminComment || review.admin_comment;
+        review.moderated_by = adminId;
+        review.moderated_at = new Date();
+
+        // Add to moderation history
+        review.moderation_history.push({
+            action,
+            previous_status: previousStatus,
+            new_status: newStatus,
+            reason: reason || '',
+            admin_id: adminId,
+            timestamp: new Date(),
+        });
+
+        await review.save();
+
+        return review;
+    }
 
 
     // ============ PRODUCT MANAGEMENT ============
