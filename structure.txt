@@ -1,4 +1,18 @@
 
+May be delete in future :
+
+employee_permission_schema
+employee_role_history_schema
+employee_role_history_schema
+user_activity_log.model
+permition_audit_log.model 
+report_schedule.model
+
+
+
+
+
+
 -> we use this structure : 
 
 src/
