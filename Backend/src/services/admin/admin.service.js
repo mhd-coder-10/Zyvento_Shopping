@@ -699,8 +699,65 @@ class AdminService {
             }
         }
 
+        //  Store old values for sync
+        const oldFirstName = user.first_name;
+        const oldLastName = user.last_name;
+        const oldEmail = user.email;
+        const oldMobile = user.mobile_number;
+
+        // Apply updates to user
         Object.assign(user, filteredData);
+
+        // Handle password update separately (with bcrypt hash)
+        if (updateData.password && updateData.password.trim()) {
+            const bcrypt = require('bcryptjs');
+            const hashedPassword = await bcrypt.hash(updateData.password.trim(), 10);
+            user.password = hashedPassword;
+        }
+
         await user.save();
+
+
+        // SYNC DENORMALIZED FIELDS ACROSS ALL LINKED COLLECTIONS
+
+        // SYNC DENORMALIZED FIELDS — User → Others
+        if (updateData.first_name !== undefined || updateData.last_name !== undefined ||
+            updateData.email !== undefined || updateData.mobile_number !== undefined) {
+
+            const baseSync = { updated_at: new Date() };
+            const newFullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+
+            try {
+                await Seller.updateMany({ user_id: user._id }, {
+                    $set: {
+                        ...(updateData.first_name !== undefined || updateData.last_name !== undefined) && { owner_name: newFullName },
+                        ...(updateData.email !== undefined) && { email: user.email },
+                        ...(updateData.mobile_number !== undefined) && { mobile_number: user.mobile_number },
+                        ...baseSync
+                    }
+                });
+
+                await SubAdmin.updateMany({ user_id: user._id }, {
+                    $set: {
+                        ...(updateData.first_name !== undefined || updateData.last_name !== undefined) && { full_name: newFullName },
+                        ...(updateData.email !== undefined) && { email: user.email },
+                        ...(updateData.mobile_number !== undefined) && { mobile_number: user.mobile_number },
+                        ...baseSync
+                    }
+                });
+
+                await Employee.updateMany({ user_id: user._id }, {
+                    $set: {
+                        ...(updateData.first_name !== undefined || updateData.last_name !== undefined) && { full_name: newFullName },
+                        ...(updateData.email !== undefined) && { email: user.email },
+                        ...(updateData.mobile_number !== undefined) && { mobile_number: user.mobile_number },
+                        ...baseSync
+                    }
+                });
+            } catch (err) {
+                console.error('❌ Forward sync failed:', err.message);
+            }
+        }
 
         const userResponse = user.toObject();
         delete userResponse.password;
@@ -1040,6 +1097,33 @@ class AdminService {
             throw ApiError.notFound('Seller not found');
         }
 
+        // REVERSE SYNC — Seller → User
+        try {
+            const userSyncFields = {};
+
+            if (updateData.owner_name !== undefined && String(updateData.owner_name).trim() !== '') {
+                const parts = String(updateData.owner_name).trim().split(' ');
+                userSyncFields.first_name = parts[0] || '';
+                userSyncFields.last_name = parts.slice(1).join(' ') || '';
+            }
+            if (updateData.email !== undefined && String(updateData.email).trim() !== '') {
+                userSyncFields.email = updateData.email;
+            }
+            if (updateData.mobile_number !== undefined && String(updateData.mobile_number).trim() !== '') {
+                userSyncFields.mobile_number = updateData.mobile_number;
+            }
+
+            if (Object.keys(userSyncFields).length > 0) {
+                userSyncFields.updated_at = new Date();
+                await User.updateOne(
+                    { _id: seller.user_id._id || seller.user_id },
+                    { $set: userSyncFields }
+                );
+            }
+        } catch (err) {
+            console.error('❌ Reverse sync (Seller) failed:', err.message);
+        }
+
         return seller;
     }
 
@@ -1284,8 +1368,7 @@ class AdminService {
         return `SUBA-${ts}${rand}`;
     }
 
-    // Get all Sub-Admins (paginated + filters + view switching)
-    // view: 'active' (default) | 'deleted'
+    // Get all Sub-Admins (paginated + filters + view switching) - view: 'active' (default) | 'deleted'
     async getAllSubAdmins(query = {}) {
         const {
             page = 1,
@@ -4895,7 +4978,7 @@ class AdminService {
 
         else if (reportType === 'sales') {
 
-            // ⚠️ FIELD MAP — verify these against your actual Order / OrderItem / Product / Category schema.
+            // FIELD MAP — verify these against your actual Order / OrderItem / Product / Category schema.
             // If a field/collection name below is wrong, only change it here — nothing
             // else in this block needs to be touched.
             //
