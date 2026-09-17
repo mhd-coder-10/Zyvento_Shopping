@@ -1,59 +1,47 @@
 // Handles all role related business logic
-// Manages role CRUD, permission assignment, role assignment to users
-// Also handles role history and permission audit logs
+// Amazon-style: role → permission_ids (flat), no module_access
 
+const mongoose = require('mongoose');
 const Role = require('../../models/role.model');
 const User = require('../../models/user.model');
-const SubAdmin = require('../../models/sub_admin.model');
-const Employee = require('../../models/employee.model');
 const RoleChangeHistory = require('../../models/role_change_history.model');
 const PermissionAuditLog = require('../../models/permission_audit_log.model');
 const ApiError = require('../../utils/apiError');
 const logger = require('../../utils/logger');
-const constants = require('../../config/constants');
-const permissionService = require('../permission.service'); 
-
+const permissionService = require('./permission.service');
 
 class RoleService {
 
     // ============ ROLE CRUD ============
+
+    // Create role
     async createRole(roleData, userId) {
-        const { role_name, role_key, role_type, description, permission_ids, module_access, data_scope, is_system_role, priority } = roleData;
+        const {
+            role_name, role_key, role_type, description,
+            permission_ids, data_scope, priority
+        } = roleData;
 
-        // ✅ CHECK PERMISSION TO CREATE ROLE
-        const hasPermission = await permissionService.hasPermission(userId, 'CREATE_ROLE');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to create roles');
-        }
+        // Duplicate checks
+        const existingKey = await Role.findOne({ role_key: role_key?.toUpperCase() });
+        if (existingKey) throw ApiError.conflict('Role key already exists');
 
-        const existingRole = await Role.findOne({ role_key });
-        if (existingRole) {
-            throw ApiError.conflict('Role key already exists');
-        }
-
-        const existingName = await Role.findOne({
-            role_name,
-            role_type
-        });
+        const existingName = await Role.findOne({ role_name, role_type });
         if (existingName) {
             throw ApiError.conflict(`Role "${role_name}" already exists for type "${role_type}"`);
         }
 
-        const role = new Role({
+        const role = await Role.create({
             role_name,
-            role_key,
+            role_key: role_key.toUpperCase(),
             role_type,
             description,
             permission_ids: permission_ids || [],
-            module_access: module_access || [],
-            data_scope: data_scope || constants.DATA_SCOPE.OWN,
-            is_system_role: is_system_role || false,
+            data_scope: data_scope || 'own',
+            is_system_role: false,
             priority: priority || 0,
             created_by: userId,
             is_active: true
         });
-
-        await role.save();
 
         await this.createPermissionAuditLog({
             userId,
@@ -62,28 +50,29 @@ class RoleService {
             newState: role.toObject()
         });
 
-        logger.info(`Role created: ${role_key}`, { roleId: role._id, createdBy: userId });
-
         return role;
     }
 
-    async getAllRoles({ roleType = null, isActive = null, page = 1, limit = 10 }) {
+    // Get all roles
+    async getAllRoles({ roleType = null, isActive = null, search = null, page = 1, limit = 100 } = {}) {
         const query = {};
-        if (roleType) {
-            query.role_type = roleType;
-        }
-        if (isActive !== null) {
+        if (roleType) query.role_type = roleType;
+        if (isActive !== null && isActive !== undefined) {
             query.is_active = isActive === 'true' || isActive === true;
+        }
+        if (search) {
+            const re = new RegExp(search, 'i');
+            query.$or = [{ role_name: re }, { role_key: re }, { description: re }];
         }
 
         const [roles, total] = await Promise.all([
             Role.find(query)
-                .populate('permission_ids')
+                .populate('permission_ids', 'permission_name permission_key module_name action')
                 .populate('created_by', 'first_name last_name email')
-                .populate('updated_by', 'first_name last_name email')
                 .sort({ priority: -1, created_at: -1 })
                 .skip((page - 1) * limit)
-                .limit(parseInt(limit)),
+                .limit(parseInt(limit))
+                .lean(),
             Role.countDocuments(query)
         ]);
 
@@ -98,49 +87,70 @@ class RoleService {
         };
     }
 
+    // Get role by ID
     async getRoleById(roleId) {
         const role = await Role.findById(roleId)
             .populate('permission_ids')
             .populate('created_by', 'first_name last_name email')
             .populate('updated_by', 'first_name last_name email');
-
-        if (!role) {
-            throw ApiError.notFound('Role not found');
-        }
-
+        if (!role) throw ApiError.notFound('Role not found');
         return role;
     }
 
+    // ============ GET USERS WITH ROLE ============
+
+    // Get users with this role - used in role details page
+    async getUsersWithRole(roleId, { page = 1, limit = 10, search = null } = {}) {
+        const role = await Role.findById(roleId).lean();
+        if (!role) throw ApiError.notFound('Role not found');
+
+        const query = { role_ids: roleId };
+        if (search) {
+            const re = new RegExp(search, 'i');
+            query.$or = [
+                { first_name: re },
+                { last_name: re },
+                { email: re },
+                { user_code: re }
+            ];
+        }
+
+        const [users, total] = await Promise.all([
+            User.find(query)
+                .select('_id user_code first_name last_name email mobile_number user_type account_status profile_image created_at')
+                .sort({ created_at: -1 })
+                .skip((page - 1) * limit)
+                .limit(parseInt(limit))
+                .lean(),
+            User.countDocuments(query)
+        ]);
+
+        return {
+            users,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
+    }
+
+    // Update role
     async updateRole(roleId, updateData, userId) {
-        // ✅ CHECK PERMISSION TO UPDATE ROLE
-        const hasPermission = await permissionService.hasPermission(userId, 'UPDATE_ROLE');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to update roles');
-        }
-
         const role = await Role.findById(roleId);
-        if (!role) {
-            throw ApiError.notFound('Role not found');
-        }
+        if (!role) throw ApiError.notFound('Role not found');
 
-        if (role.is_system_role) {
-            throw ApiError.forbidden('Cannot modify system role');
-        }
+        // ✅ System role bhi edit ho sakta hai, BUT role_key aur role_type nahi change ho sakte
 
         const oldState = role.toObject();
-        const allowedFields = [
-            'role_name', 'description', 'permission_ids',
-            'module_access', 'data_scope', 'priority'
-        ];
 
-        const filteredData = {};
-        for (const field of allowedFields) {
-            if (updateData[field] !== undefined) {
-                filteredData[field] = updateData[field];
-            }
-        }
+        // Allowed fields — role_key and role_type excluded
+        const allowed = ['role_name', 'description', 'permission_ids', 'data_scope', 'priority'];
+        allowed.forEach((k) => {
+            if (updateData[k] !== undefined) role[k] = updateData[k];
+        });
 
-        Object.assign(role, filteredData);
         role.updated_by = userId;
         await role.save();
 
@@ -152,83 +162,60 @@ class RoleService {
             newState: role.toObject()
         });
 
-        logger.info(`Role updated: ${role.role_key}`, { roleId: role._id, updatedBy: userId });
-
         return role;
     }
 
-    async deleteRole(roleId, userId) { // ✅ ADDED userId parameter
-        // ✅ CHECK PERMISSION TO DELETE ROLE
-        const hasPermission = await permissionService.hasPermission(userId, 'DELETE_ROLE');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to delete roles');
-        }
-
+    // Delete role
+    async deleteRole(roleId, userId) {
         const role = await Role.findById(roleId);
-        if (!role) {
-            throw ApiError.notFound('Role not found');
-        }
-
-        if (role.is_system_role) {
-            throw ApiError.forbidden('Cannot delete system role');
-        }
+        if (!role) throw ApiError.notFound('Role not found');
+        if (role.is_system_role) throw ApiError.forbidden('Cannot delete system role');
 
         const usersWithRole = await User.countDocuments({ role_ids: roleId });
         if (usersWithRole > 0) {
-            throw ApiError.badRequest('Cannot delete role. It is assigned to users.');
+            const err = ApiError.badRequest(
+                `Cannot delete role. It is assigned to ${usersWithRole} user${usersWithRole > 1 ? 's' : ''}. Please unassign first.`
+            );
+            err.meta = { assigned_users_count: usersWithRole, role_id: roleId };
+            throw err;
         }
 
+        const oldState = role.toObject();
         await role.deleteOne();
 
         await this.createPermissionAuditLog({
-            userId: userId,
+            userId,
             action: 'role_deleted',
             affectedRoleId: role._id,
-            oldState: role.toObject()
+            oldState
         });
-
-        logger.info(`Role deleted: ${role.role_key}`, { roleId: role._id });
 
         return { message: 'Role deleted successfully' };
     }
 
-    async toggleRoleStatus(roleId, userId) { // ✅ ADDED userId parameter
-        // ✅ CHECK PERMISSION TO UPDATE ROLE STATUS
-        const hasPermission = await permissionService.hasPermission(userId, 'UPDATE_ROLE');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to update role status');
-        }
-
+    // Toggle role status (activate/deactivate)
+    async toggleRoleStatus(roleId, userId) {
         const role = await Role.findById(roleId);
-        if (!role) {
-            throw ApiError.notFound('Role not found');
-        }
-
+        if (!role) throw ApiError.notFound('Role not found');
         role.is_active = !role.is_active;
         await role.save();
-
         return role;
     }
 
     // ============ ROLE PERMISSIONS ============
-    async assignPermissions(roleId, permissionIds, userId) { // ✅ ADDED userId parameter
-        // ✅ CHECK PERMISSION TO ASSIGN PERMISSIONS
-        const hasPermission = await permissionService.hasPermission(userId, 'ASSIGN_PERMISSIONS');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to assign permissions');
-        }
 
-        const role = await Role.findById(roleId);
-        if (!role) {
-            throw ApiError.notFound('Role not found');
-        }
+    // Assign permissions to role
+    async assignPermissions(roleId, permissionIds, userId) {
+        const role = await Role.findOne(roleId);
+        if (!role) throw ApiError.notFound('Role not found');
+        if (role.is_system_role) throw ApiError.forbidden('Cannot modify system role');
 
         const oldState = role.toObject();
-        role.permission_ids = permissionIds;
+        role.permission_ids = permissionIds || [];
         await role.save();
 
         await this.createPermissionAuditLog({
-            userId: userId,
+            userId,
             action: 'permission_assigned',
             affectedRoleId: role._id,
             oldState,
@@ -238,26 +225,19 @@ class RoleService {
         return role;
     }
 
-    async removePermission(roleId, permissionId, userId) { // ✅ ADDED userId parameter
-        // ✅ CHECK PERMISSION TO REMOVE PERMISSION
-        const hasPermission = await permissionService.hasPermission(userId, 'REMOVE_PERMISSIONS');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to remove permissions');
-        }
-
+    // Remove permission from role
+    async removePermission(roleId, permissionId, userId) {
         const role = await Role.findById(roleId);
-        if (!role) {
-            throw ApiError.notFound('Role not found');
-        }
+        if (!role) throw ApiError.notFound('Role not found');
 
         const oldState = role.toObject();
         role.permission_ids = role.permission_ids.filter(
-            id => id.toString() !== permissionId
+            (id) => id.toString() !== permissionId
         );
         await role.save();
 
         await this.createPermissionAuditLog({
-            userId: userId,
+            userId,
             action: 'permission_revoked',
             affectedRoleId: role._id,
             oldState,
@@ -267,40 +247,40 @@ class RoleService {
         return role;
     }
 
+    // Get role permissions
     async getRolePermissions(roleId) {
         const role = await Role.findById(roleId).populate('permission_ids');
-        if (!role) {
-            throw ApiError.notFound('Role not found');
-        }
-
+        if (!role) throw ApiError.notFound('Role not found');
         return role.permission_ids;
     }
 
     // ============ ROLE ASSIGNMENT ============
-    async assignRoleToUser(userId, roleIds, assignedBy, reason = '') {
-        // ✅ CHECK PERMISSION TO ASSIGN ROLES
-        const hasPermission = await permissionService.hasPermission(assignedBy, 'ASSIGN_ROLES');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to assign roles');
+
+    // Assign role to user
+    async assignRoleToUser(identifier, roleIds, assignedBy, reason = '') {
+        let query = {};
+        if (mongoose.Types.ObjectId.isValid(identifier) && String(identifier).length === 24) {
+            query = { _id: identifier };
+        } else {
+            query = { user_code: identifier };
         }
 
-        const user = await User.findById(userId);
-        if (!user) {
-            throw ApiError.notFound('User not found');
-        }
+        const user = await User.findOne(query);   // findOne (no findById because findById is take the only string of object ID )
+        if (!user) throw ApiError.notFound('User not found');
 
         const roles = await Role.find({ _id: { $in: roleIds }, is_active: true });
         if (roles.length !== roleIds.length) {
             throw ApiError.badRequest('Some roles are invalid or inactive');
         }
 
-        const oldRoleIds = user.role_ids || [];
-        const newRoleIds = [...new Set([...oldRoleIds.map(id => id.toString()), ...roleIds])];
+        const oldRoleIds = (user.role_ids || []).map((id) => id.toString());
+        const newRoleIds = [...new Set([...oldRoleIds, ...roleIds.map(String)])];
+
         user.role_ids = newRoleIds;
         await user.save();
 
         await RoleChangeHistory.create({
-            user_id: userId,
+            user_id: user._id,
             changed_by: assignedBy,
             old_role_ids: oldRoleIds,
             new_role_ids: newRoleIds,
@@ -311,36 +291,35 @@ class RoleService {
         await this.createPermissionAuditLog({
             userId: assignedBy,
             action: 'role_assigned',
-            affectedUserId: userId,
+            affectedUserId: user._id,
             oldState: { role_ids: oldRoleIds },
             newState: { role_ids: newRoleIds }
         });
 
-        logger.info(`Roles assigned to user: ${user.email}`, { userId, roles: roleIds, assignedBy });
-
-        return { user_id: userId, assigned_roles: roleIds };
+        return { user_id: user._id, assigned_roles: roleIds };   // 👈 user._id
     }
 
-    async revokeRoleFromUser(userId, roleIds, revokedBy, reason = '') {
-        // ✅ CHECK PERMISSION TO REVOKE ROLES
-        const hasPermission = await permissionService.hasPermission(revokedBy, 'REVOKE_ROLES');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to revoke roles');
+    // Revoke role from user
+    async revokeRoleFromUser(identifier, roleIds, revokedBy, reason = '') {
+        let query = {};
+        if (mongoose.Types.ObjectId.isValid(identifier) && String(identifier).length === 24) {
+            query = { _id: identifier };
+        } else {
+            query = { user_code: identifier };
         }
 
-        const user = await User.findById(userId);
-        if (!user) {
-            throw ApiError.notFound('User not found');
-        }
+        const user = await User.findOne(query); 
+        if (!user) throw ApiError.notFound('User not found');
 
-        const oldRoleIds = user.role_ids || [];
-        const newRoleIds = oldRoleIds.filter(id => !roleIds.includes(id.toString()));
+        const oldRoleIds = (user.role_ids || []).map((id) => id.toString());
+        const revokeSet = new Set(roleIds.map(String));
+        const newRoleIds = oldRoleIds.filter((id) => !revokeSet.has(id));
 
         user.role_ids = newRoleIds;
         await user.save();
 
         await RoleChangeHistory.create({
-            user_id: userId,
+            user_id: user._id,
             changed_by: revokedBy,
             old_role_ids: oldRoleIds,
             new_role_ids: newRoleIds,
@@ -348,70 +327,63 @@ class RoleService {
             reason
         });
 
-        await this.createPermissionAuditLog({
-            userId: revokedBy,
-            action: 'role_revoked',
-            affectedUserId: userId,
-            oldState: { role_ids: oldRoleIds },
-            newState: { role_ids: newRoleIds }
-        });
-
-        logger.info(`Roles revoked from user: ${user.email}`, { userId, roles: roleIds, revokedBy });
-
-        return { user_id: userId, revoked_roles: roleIds };
+        return { user_id: user._id, revoked_roles: roleIds };
     }
 
+    // Bulk assign roles to users
     async bulkAssignRoles(assignments, assignedBy, reason = '') {
-        // ✅ CHECK PERMISSION FOR BULK ASSIGN
-        const hasPermission = await permissionService.hasPermission(assignedBy, 'ASSIGN_ROLES');
-        if (!hasPermission) {
-            throw ApiError.forbidden('You do not have permission to bulk assign roles');
-        }
-
         const results = [];
         const errors = [];
-
-        for (const assignment of assignments) {
+        for (const a of assignments) {
             try {
-                const result = await this.assignRoleToUser(
-                    assignment.user_id,
-                    assignment.role_ids,
-                    assignedBy,
-                    reason
-                );
-                results.push(result);
-            } catch (error) {
-                errors.push({
-                    user_id: assignment.user_id,
-                    error: error.message
-                });
+                const r = await this.assignRoleToUser(a.user_id, a.role_ids, assignedBy, reason);
+                results.push(r);
+            } catch (e) {
+                errors.push({ user_id: a.user_id, error: e.message });
             }
         }
-
         return { success: results, errors };
     }
 
-    async getUserRoles(userId) {
-        const user = await User.findById(userId).populate('role_ids');
-        if (!user) {
-            throw ApiError.notFound('User not found');
+    // Get user roles
+    async getUserRoles(identifier) {
+        let query = {};
+        if (mongoose.Types.ObjectId.isValid(identifier) && String(identifier).length === 24) {
+            query = { _id: identifier };
+        } else {
+            query = { user_code: identifier };
         }
 
-        return user.role_ids;
+        const user = await User.findOne(query)
+            .populate({
+                path: 'role_ids',
+                match: { is_active: true }
+            })
+            .select('role_ids')                  // plural
+            .lean();
+
+        if (!user) throw ApiError.notFound('User not found');
+        return user.role_ids || [];
     }
 
-    // ✅ REMOVED getUserPermissions - Already in permissionService
+    // Get user permissions
+    async getUserPermissions(userId) {
+        return permissionService.getUserPermissions(userId);
+    }
 
     // ============ ROLE HISTORY ============
-    async getRoleHistory(userId, { page = 1, limit = 10 }) {
+
+    // Get role history for user
+    async getRoleHistory(userId, { page = 1, limit = 10 } = {}) {
         const [history, total] = await Promise.all([
             RoleChangeHistory.find({ user_id: userId })
                 .populate('changed_by', 'first_name last_name email')
-                .populate('old_role_ids')
-                .populate('new_role_ids')
+                .populate('old_role_ids', 'role_name role_key')
+                .populate('new_role_ids', 'role_name role_key')
                 .sort({ created_at: -1 })
                 .skip((page - 1) * limit)
-                .limit(parseInt(limit)),
+                .limit(parseInt(limit))
+                .lean(),
             RoleChangeHistory.countDocuments({ user_id: userId })
         ]);
 
@@ -426,7 +398,8 @@ class RoleService {
         };
     }
 
-    // ============ PERMISSION AUDIT LOG ============
+    // ============ AUDIT LOG ============
+    // Create Permission Auding Log
     async createPermissionAuditLog({
         userId,
         action,
@@ -444,8 +417,8 @@ class RoleService {
                 old_state: oldState,
                 new_state: newState
             });
-        } catch (error) {
-            logger.error('Failed to create permission audit log:', error);
+        } catch (err) {
+            logger.error('Failed to create permission audit log:', err);
         }
     }
 }

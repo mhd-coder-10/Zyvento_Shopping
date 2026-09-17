@@ -5,7 +5,7 @@
 
 const constants = require('../config/constants');
 const ApiError = require('../utils/apiError');
-const permissionService = require('../services/permission.service');
+const permissionService = require('../services/admin/permission.service');
 
 const permissionsMiddleware = {
     /**

@@ -6,6 +6,112 @@ const Joi = require('joi');
 
 const adminValidation = {
 
+    // ============ ROLE MANAGEMENT VALIDATION ============
+
+    idParam: Joi.object({
+        roleId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required()
+    }),
+
+    userIdParam: Joi.object({
+        userId: Joi.string().trim().required()
+    }),
+
+    createRole: Joi.object({
+        role_name: Joi.string().trim().min(2).max(100).required(),
+        role_key: Joi.string().trim().min(2).max(100).required(),
+        role_type: Joi.string()
+            .valid('system', 'admin', 'sub_admin', 'seller', 'employee', 'customer')
+            .required(),
+        description: Joi.string().trim().max(500).optional().allow('', null),
+        permission_ids: Joi.array()
+            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+            .optional()
+            .default([]),
+        data_scope: Joi.string().valid('all', 'own').default('own'),
+        priority: Joi.number().integer().min(0).max(100).optional().default(0)
+    }),
+
+    updateRole: Joi.object({
+        role_name: Joi.string().trim().min(2).max(100).optional(),
+        description: Joi.string().trim().max(500).optional().allow('', null),
+        permission_ids: Joi.array()
+            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+            .optional(),
+        data_scope: Joi.string().valid('all', 'own').optional(),
+        priority: Joi.number().integer().min(0).max(100).optional()
+    }).min(1),
+
+    // ============ PERMISSION MANAGEMENT VALIDATION ============
+
+    createPermission: Joi.object({
+        permission_name: Joi.string().trim().min(2).max(100).required(),
+        permission_key: Joi.string().trim().min(2).max(100).required(),
+        module_name: Joi.string().trim().min(2).max(50).required(),
+        sub_module: Joi.string().trim().max(50).optional().allow('', null),
+        action: Joi.string()
+            .valid('create', 'read', 'update', 'delete', 'manage',
+                'approve', 'reject', 'export', 'import',
+                'view_all', 'view_own', 'assign', 'revoke')
+            .required(),
+        description: Joi.string().trim().max(500).optional().allow('', null),
+        is_system: Joi.boolean().optional().default(false),
+        priority: Joi.number().integer().min(0).max(100).optional().default(0)
+    }),
+
+    updatePermission: Joi.object({
+        permission_name: Joi.string().trim().min(2).max(100).optional(),
+        description: Joi.string().trim().max(500).optional().allow('', null),
+        priority: Joi.number().integer().min(0).max(100).optional()
+    }).min(1),
+
+    // PERMISSION ID PARAM
+    permissionIdParam: Joi.object({
+        permissionId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required()
+    }),
+
+    // AUDIT ID PARAM 
+    auditIdParam: Joi.object({
+        auditId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required()
+    }),
+
+
+    // ============ ROLE ASSIGNMENT VALIDATION =============
+
+    assignRoleToUser: Joi.object({
+        user_id: Joi.string().trim().required(),
+        role_ids: Joi.array()
+            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+            .min(1)
+            .required(),
+        reason: Joi.string().trim().max(500).optional().allow('', null)
+    }),
+
+    revokeRoleFromUser: Joi.object({
+        user_id: Joi.string().trim().required(),
+        role_ids: Joi.array()
+            .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+            .min(1)
+            .required(),
+        reason: Joi.string().trim().max(500).optional().allow('', null)
+    }),
+
+    bulkAssignRoles: Joi.object({
+        assignments: Joi.array()
+            .items(
+                Joi.object({
+                    user_id: Joi.string().trim().required(),
+                    role_ids: Joi.array()
+                        .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+                        .min(1)
+                        .required()
+                })
+            )
+            .min(1)
+            .required(),
+        reason: Joi.string().trim().max(500).optional().allow('', null)
+    }),
+
+
     // ============ USERS MANAGEMENT VALIDATION ==============
     // GET USERS (With Filters) 
     getUsers: Joi.object({
@@ -436,16 +542,6 @@ const adminValidation = {
         reason: Joi.string().trim().max(500).optional().allow('', null),
         notes: Joi.string().trim().max(1000).optional().allow('', null)
     }),
-
-
-
-
-
-
-
-
-
-
 
 
 

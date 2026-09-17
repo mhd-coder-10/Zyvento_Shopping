@@ -34,7 +34,7 @@ const CustomerComplaint = require('../../models/customer_complaint.model');
 
 const logger = require('../../utils/logger');
 const constants = require('../../config/constants');
-const permissionService = require('../permission.service');
+const permissionService = require('./permission.service');
 const auditService = require('../audit.service');
 
 

@@ -1,28 +1,32 @@
+
 // Handles all role related API requests
-// Manages role CRUD operations, permission assignment, role history
-// Also handles role assignment to users and user permissions view  
+// Manages role CRUD, permission assignment, role history
+// Also handles role assignment to users and user permissions view
 
 const roleService = require('../../services/admin/role.service');
 const ApiResponse = require('../../utils/apiResponse');
-const ApiError = require('../../utils/apiError');
 const asyncHandler = require('../../utils/asyncHandler');
-const auditService = require('../../services/audit.service'); 
+const auditService = require('../../services/audit.service');
 
 const roleController = {
 
     // ============ ROLE CRUD ============
-    createRole: asyncHandler(async (req, res) => {
-        const roleData = req.body;
-        const role = await roleService.createRole(roleData, req.userId);
 
-        // ✅ AUDIT LOG - Role Creation
+    // Create role
+    createRole: asyncHandler(async (req, res) => {
+        const role = await roleService.createRole(req.body, req.userId);
+
         await auditService.log({
             userId: req.userId,
             action: 'create',
             module: 'role',
             moduleId: role._id,
             description: `Role created: ${role.role_name}`,
-            newData: { role_name: role.role_name, role_key: role.role_key, role_type: role.role_type },
+            newData: {
+                role_name: role.role_name,
+                role_key: role.role_key,
+                role_type: role.role_type
+            },
             ip: req.ip,
             userAgent: req.get('user-agent'),
             status: 'success'
@@ -33,14 +37,18 @@ const roleController = {
         );
     }),
 
+    // Get all roles
     getAllRoles: asyncHandler(async (req, res) => {
-        const { role_type, is_active, page, limit } = req.query;
+        const { role_type, is_active, search, page, limit } = req.query;
+
         const result = await roleService.getAllRoles({
             roleType: role_type,
             isActive: is_active,
+            search,
             page,
             limit
         });
+
         res.status(200).json(
             ApiResponse.paginated(
                 result.roles,
@@ -50,6 +58,7 @@ const roleController = {
         );
     }),
 
+    // Get role by ID
     getRoleById: asyncHandler(async (req, res) => {
         const { roleId } = req.params;
         const role = await roleService.getRoleById(roleId);
@@ -58,24 +67,41 @@ const roleController = {
         );
     }),
 
+    // Get users with this role
+    getUsersWithRole: asyncHandler(async (req, res) => {
+        const { roleId } = req.params;
+        const { page, limit, search } = req.query;
+
+        const result = await roleService.getUsersWithRole(roleId, { page, limit, search });
+
+        res.status(200).json(
+            ApiResponse.paginated(
+                result.users,
+                result.pagination,
+                'Users with this role fetched successfully'
+            )
+        );
+    }),
+
+    // Update role
     updateRole: asyncHandler(async (req, res) => {
         const { roleId } = req.params;
-        const updateData = req.body;
 
-        // Get old role data for audit
         const oldRole = await roleService.getRoleById(roleId);
+        const role = await roleService.updateRole(roleId, req.body, req.userId);
 
-        const role = await roleService.updateRole(roleId, updateData, req.userId);
-
-        // ✅ AUDIT LOG - Role Update
         await auditService.log({
             userId: req.userId,
             action: 'update',
             module: 'role',
             moduleId: roleId,
             description: `Role updated: ${oldRole.role_name}`,
-            oldData: { role_name: oldRole.role_name, role_key: oldRole.role_key, is_active: oldRole.is_active },
-            newData: updateData,
+            oldData: {
+                role_name: oldRole.role_name,
+                role_key: oldRole.role_key,
+                is_active: oldRole.is_active
+            },
+            newData: req.body,
             ip: req.ip,
             userAgent: req.get('user-agent'),
             status: 'success'
@@ -86,22 +112,23 @@ const roleController = {
         );
     }),
 
+    // Delete role
     deleteRole: asyncHandler(async (req, res) => {
         const { roleId } = req.params;
 
-        // Get old role data for audit
         const oldRole = await roleService.getRoleById(roleId);
-
         await roleService.deleteRole(roleId, req.userId);
 
-        // ✅ AUDIT LOG - Role Delete
         await auditService.log({
             userId: req.userId,
             action: 'delete',
             module: 'role',
             moduleId: roleId,
             description: `Role deleted: ${oldRole.role_name}`,
-            oldData: { role_name: oldRole.role_name, role_key: oldRole.role_key },
+            oldData: {
+                role_name: oldRole.role_name,
+                role_key: oldRole.role_key
+            },
             ip: req.ip,
             userAgent: req.get('user-agent'),
             status: 'success'
@@ -112,15 +139,13 @@ const roleController = {
         );
     }),
 
+    // Toggle role status (activate/deactivate)
     toggleRoleStatus: asyncHandler(async (req, res) => {
         const { roleId } = req.params;
 
-        // Get old role data for audit
         const oldRole = await roleService.getRoleById(roleId);
-
         const role = await roleService.toggleRoleStatus(roleId, req.userId);
 
-        // ✅ AUDIT LOG - Role Status Toggle
         await auditService.log({
             userId: req.userId,
             action: 'status_change',
@@ -135,29 +160,31 @@ const roleController = {
         });
 
         res.status(200).json(
-            ApiResponse.success(role, `Role ${role.is_active ? 'activated' : 'deactivated'} successfully`)
+            ApiResponse.success(
+                role,
+                `Role ${role.is_active ? 'activated' : 'deactivated'} successfully`
+            )
         );
     }),
 
     // ============ ROLE PERMISSIONS ============
+
+    // Assign permissions to role
     assignPermissions: asyncHandler(async (req, res) => {
         const { roleId } = req.params;
         const { permission_ids } = req.body;
 
-        // Get old role data for audit
         const oldRole = await roleService.getRoleById(roleId);
-
         const role = await roleService.assignPermissions(roleId, permission_ids, req.userId);
 
-        // ✅ AUDIT LOG - Permissions Assigned
         await auditService.log({
             userId: req.userId,
             action: 'assign_permissions',
             module: 'role',
             moduleId: roleId,
             description: `Permissions assigned to role: ${role.role_name}`,
-            oldData: { permission_ids: oldRole.permission_ids || [] },
-            newData: { permission_ids: permission_ids },
+            oldData: { permission_ids: (oldRole.permission_ids || []).map((p) => p._id || p) },
+            newData: { permission_ids },
             ip: req.ip,
             userAgent: req.get('user-agent'),
             status: 'success'
@@ -168,23 +195,21 @@ const roleController = {
         );
     }),
 
+    // Remove permission from role
     removePermission: asyncHandler(async (req, res) => {
         const { roleId, permissionId } = req.params;
 
-        // Get old role data for audit
         const oldRole = await roleService.getRoleById(roleId);
-
         const role = await roleService.removePermission(roleId, permissionId, req.userId);
 
-        // ✅ AUDIT LOG - Permission Removed
         await auditService.log({
             userId: req.userId,
             action: 'remove_permission',
             module: 'role',
             moduleId: roleId,
             description: `Permission removed from role: ${role.role_name}`,
-            oldData: { permission_ids: oldRole.permission_ids || [] },
-            newData: { permission_ids: role.permission_ids || [] },
+            oldData: { permission_ids: (oldRole.permission_ids || []).map((p) => p._id || p) },
+            newData: { permission_ids: (role.permission_ids || []).map((p) => p._id || p) },
             ip: req.ip,
             userAgent: req.get('user-agent'),
             status: 'success'
@@ -195,6 +220,7 @@ const roleController = {
         );
     }),
 
+    // Get role permissions
     getRolePermissions: asyncHandler(async (req, res) => {
         const { roleId } = req.params;
         const permissions = await roleService.getRolePermissions(roleId);
@@ -204,17 +230,23 @@ const roleController = {
     }),
 
     // ============ ROLE ASSIGNMENT ============
+
+    // Assign role to user
     assignRoleToUser: asyncHandler(async (req, res) => {
         const { user_id, role_ids, reason } = req.body;
-        const result = await roleService.assignRoleToUser(user_id, role_ids, req.userId, reason);
+        const result = await roleService.assignRoleToUser(
+            user_id,
+            role_ids,
+            req.userId,
+            reason
+        );
 
-        // ✅ AUDIT LOG - Role Assigned to User
         await auditService.log({
             userId: req.userId,
             action: 'assign_role',
             module: 'user',
             moduleId: user_id,
-            description: `Roles assigned to user: ${result.user_id}`,
+            description: `Roles assigned to user: ${user_id}`,
             newData: { role_ids, reason },
             ip: req.ip,
             userAgent: req.get('user-agent'),
@@ -226,17 +258,22 @@ const roleController = {
         );
     }),
 
+    // Revoke role from user
     revokeRoleFromUser: asyncHandler(async (req, res) => {
         const { user_id, role_ids, reason } = req.body;
-        const result = await roleService.revokeRoleFromUser(user_id, role_ids, req.userId, reason);
+        const result = await roleService.revokeRoleFromUser(
+            user_id,
+            role_ids,
+            req.userId,
+            reason
+        );
 
-        // ✅ AUDIT LOG - Role Revoked from User
         await auditService.log({
             userId: req.userId,
             action: 'revoke_role',
             module: 'user',
             moduleId: user_id,
-            description: `Roles revoked from user: ${result.user_id}`,
+            description: `Roles revoked from user: ${user_id}`,
             newData: { role_ids, reason },
             ip: req.ip,
             userAgent: req.get('user-agent'),
@@ -248,11 +285,15 @@ const roleController = {
         );
     }),
 
+    // Bulk assign roles to users
     bulkAssignRoles: asyncHandler(async (req, res) => {
         const { assignments, reason } = req.body;
-        const result = await roleService.bulkAssignRoles(assignments, req.userId, reason);
+        const result = await roleService.bulkAssignRoles(
+            assignments,
+            req.userId,
+            reason
+        );
 
-        // ✅ AUDIT LOG - Bulk Roles Assigned
         await auditService.log({
             userId: req.userId,
             action: 'bulk_assign_roles',
@@ -269,6 +310,7 @@ const roleController = {
         );
     }),
 
+    // Get user roles
     getUserRoles: asyncHandler(async (req, res) => {
         const { userId } = req.params;
         const roles = await roleService.getUserRoles(userId);
@@ -277,6 +319,7 @@ const roleController = {
         );
     }),
 
+    // Get user permissions
     getUserPermissions: asyncHandler(async (req, res) => {
         const { userId } = req.params;
         const permissions = await roleService.getUserPermissions(userId);
@@ -285,14 +328,15 @@ const roleController = {
         );
     }),
 
-
-    // ============ REMOVED getUserPermissions - Already in permissionService ============
-
     // ============ ROLE HISTORY ============
+
+    // Get role history for user
     getRoleHistory: asyncHandler(async (req, res) => {
         const { userId } = req.params;
         const { page, limit } = req.query;
+
         const result = await roleService.getRoleHistory(userId, { page, limit });
+
         res.status(200).json(
             ApiResponse.paginated(
                 result.history,
@@ -302,5 +346,6 @@ const roleController = {
         );
     })
 };
+
 
 module.exports = roleController;

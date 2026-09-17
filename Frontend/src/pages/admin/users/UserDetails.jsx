@@ -470,9 +470,12 @@ const UserDetails = () => {
                     </div>
 
                     <div className="p-4 sm:p-6">
+                        {/* OVERVIEW */}
                         {activeTab === 'overview' && (
                             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-                                <div className="space-y-3">
+                                
+                                {/* Contact Information */}
+                                <div className="space-y-3 text-start">
                                     <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                                         <FiUser className="text-blue-600" /> Contact Information
                                     </h3>
@@ -482,7 +485,9 @@ const UserDetails = () => {
                                     <InfoRow icon={<FiCalendar size={16} />} label="Date of Birth" value={user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : null} />
                                     <InfoRow icon={<FiUser size={16} />} label="Gender" value={user.gender} />
                                 </div>
-                                <div className="space-y-3">
+
+                                {/* Address & Account */}
+                                <div className="space-y-3 text-start">
                                     <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                                         <FiMapPin className="text-blue-600" /> Address &amp; Account
                                     </h3>
@@ -496,8 +501,9 @@ const UserDetails = () => {
                             </motion.div>
                         )}
 
+                        {/* ACTIVITY */}
                         {activeTab === 'activity' && (
-                            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 text-start">
                                 <InfoRow icon={<FiClock size={16} />} label="Account created" value={user.created_at ? new Date(user.created_at).toLocaleString() : null} />
                                 <InfoRow icon={<FiActivity size={16} />} label="Last login" value={user.last_login ? new Date(user.last_login).toLocaleString() : null} />
                                 <InfoRow icon={<FiRefreshCw size={16} />} label="Profile last updated" value={user.updated_at ? new Date(user.updated_at).toLocaleString() : null} />

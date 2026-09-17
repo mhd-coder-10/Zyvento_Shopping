@@ -3,7 +3,7 @@
 // Used in routes to restrict access
 
 const ApiError = require('../utils/apiError');
-const permissionService = require('../services/permission.service');
+const permissionService = require('../services/admin/permission.service');
 
 /**
  * Authorization Middleware
@@ -254,3 +254,4 @@ module.exports = {
     checkEmployeeAccess,
     checkSubAdminAccess,
 };
+

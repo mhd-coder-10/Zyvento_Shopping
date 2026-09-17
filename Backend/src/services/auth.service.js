@@ -17,10 +17,12 @@ const emailHelper = require('../utils/emailHelper');
 const cloudinaryHelper = require('../utils/cloudinary.helper');
 const logger = require('../utils/logger');
 const constants = require('../config/constants');
+const permissionService = require('./admin/permission.service');
+
 
 class AuthService {
 
-    // ============ REGISTER ============
+    // REGISTER 
     async register(userData) {
         const {
             first_name,
@@ -98,7 +100,59 @@ class AuthService {
         };
     }
 
-    // ============ LOGIN ============
+    // LOGIN
+    // async login(email, password) {
+    //     const user = await User.findOne({ email: email.toLowerCase() })
+    //         .select('+password')
+    //         .populate('role_ids')
+    //         .populate('direct_permissions');
+
+    //     if (!user) {
+    //         throw ApiError.unauthorized('Account not found with this email');
+    //     }
+
+    //     const isPasswordValid = await bcrypt.compare(password, user.password);
+    //     if (!isPasswordValid) {
+    //         throw ApiError.unauthorized('Incorrect password. Please try again.');
+    //     }
+
+    //     if (user.account_status === 'blocked') {
+    //         throw ApiError.forbidden('Your account has been blocked. Please contact support.');
+    //     }
+
+    //     if (user.account_status === 'deleted') {
+    //         throw ApiError.forbidden('Your account has been deleted.');
+    //     }
+
+    //     if (user.account_status === 'inactive') {
+    //         throw ApiError.forbidden('Your account is inactive. Please contact support.');
+    //     }
+
+    //     if (!user.is_email_verified && user.user_type !== 'super_admin') {
+    //         throw ApiError.forbidden('Please verify your email before logging in.');
+    //     }
+
+    //     user.last_login = new Date();
+    //     await user.save({ validateBeforeSave: false });
+
+    //     const tokens = jwtHelper.generateTokens(user);
+
+    //     user.refresh_token = tokens.refreshToken;
+    //     await user.save({ validateBeforeSave: false });
+
+    //     const userResponse = user.toObject();
+    //     delete userResponse.password;
+    //     delete userResponse.refresh_token;
+
+    //     logger.info(`User logged in: ${user.email}`, { userId: user._id, userType: user.user_type });
+
+    //     return {
+    //         user: userResponse,
+    //         ...tokens
+    //     };
+    // }
+
+    // LOGIN
     async login(email, password) {
         const user = await User.findOne({ email: email.toLowerCase() })
             .select('+password')
@@ -138,6 +192,15 @@ class AuthService {
         user.refresh_token = tokens.refreshToken;
         await user.save({ validateBeforeSave: false });
 
+        // FETCH USER PERMISSIONS
+        let permissions = [];
+        try {
+            permissions = await permissionService.getUserPermissionKeys(user._id);
+        } catch (permErr) {
+            logger.error('Failed to fetch user permissions:', permErr);
+            permissions = [];
+        }
+
         const userResponse = user.toObject();
         delete userResponse.password;
         delete userResponse.refresh_token;
@@ -146,11 +209,12 @@ class AuthService {
 
         return {
             user: userResponse,
+            permissions,          // Must be add this to return permissions
             ...tokens
         };
     }
 
-    // ============ LOGOUT ============
+    // LOGOUT
     async logout(userId, refreshToken) {
         const user = await User.findById(userId);
         if (!user) {
@@ -165,13 +229,13 @@ class AuthService {
         return { message: 'Logged out successfully' };
     }
 
-    // ============ REFRESH TOKEN ============
+    // REFRESH TOKEN
     async refreshToken(refreshToken) {
         const result = await jwtHelper.refreshAccessToken(refreshToken);
         return result;
     }
 
-    // ============ SEND OTP ===========
+    // SEND OTP
     async sendOTP({ email, purpose, mobileNumber = null }) {
         const user = await User.findOne({ email: email });
         const otp = otpHelper.generateOTP();
@@ -196,7 +260,7 @@ class AuthService {
         };
     }
 
-    // ============ VERIFY OTP ============
+    // VERIFY OTP 
     async verifyOTP({ email, otp, purpose }) {
         const record = await VerificationOTP.findOne({
             email: email.toLowerCase(),
@@ -316,7 +380,7 @@ class AuthService {
         };
     }
 
-    // ============ CHANGE PASSWORD ============
+    // CHANGE PASSWORD
     async changePassword(userId, currentPassword, newPassword) {
         const user = await User.findById(userId).select('+password');
         if (!user) {
@@ -339,7 +403,7 @@ class AuthService {
         return { message: 'Password changed successfully' };
     }
 
-    // ============ GET PROFILE ============
+    // GET PROFILE
     async getProfile(userId) {
         const user = await User.findById(userId)
             .select('-password -refresh_token')
@@ -376,7 +440,7 @@ class AuthService {
         };
     }
 
-    // ============ UPDATE PROFILE ============
+    // UPDATE PROFILE
     async updateProfile(userId, updateData) {
         const user = await User.findById(userId);
         if (!user) {
@@ -404,7 +468,7 @@ class AuthService {
         return userResponse;
     }
 
-    // ============ UPLOAD PROFILE IMAGE ============
+    // UPLOAD PROFILE IMAGE
     async uploadProfileImage(userId, file) {
         const user = await User.findById(userId);
         if (!user) {
@@ -436,7 +500,7 @@ class AuthService {
         };
     }
 
-    // ============ DELETE PROFILE IMAGE ============
+    // DELETE PROFILE IMAGE
     async deleteProfileImage(userId) {
         const user = await User.findById(userId);
         if (!user) {
@@ -458,7 +522,7 @@ class AuthService {
         return { message: 'Profile image deleted successfully' };
     }
 
-    // ============ VERIFY EMAIL ============
+    // VERIFY EMAIL
     async verifyEmail(userId, otp) {
         const user = await User.findById(userId);
         if (!user) {
@@ -499,7 +563,7 @@ class AuthService {
         return { message: 'Email verified successfully' };
     }
 
-    // ============ RESEND VERIFICATION ============
+    // RESEND VERIFICATION
     async resendVerification(userId) {
         const user = await User.findById(userId);
         if (!user) {

@@ -1,6 +1,5 @@
 
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -8,11 +7,12 @@ import {
     FiShield, FiEye, FiEyeOff, FiCalendar, FiAlertCircle, FiRefreshCw,
     FiX,
 } from 'react-icons/fi';
-import { FaStore, FaUsersCog, FaUserTag } from 'react-icons/fa';
+import { FaUsersCog, FaUserTag } from 'react-icons/fa';
 import ApiService from '../../../api/ApiService';
 import AdminTopbar from '../../../components/admin/AdminTopbar';
+import UserRoleMultiSelect from '../../../components/admin/role/UserRoleMultiSelect';
 
-/* ================= OPTIONS ================= */
+/* OPTIONS */
 const MAIN_USER_TYPES = [
     { value: 'customer', label: 'Customer' },
     { value: 'seller', label: 'Seller' },
@@ -56,7 +56,25 @@ const EMPTY_FORM = {
     country: '', postal_code: '',
 };
 
-/* ================= FIELD COMPONENTS ================= */
+/* Maps user_type to role_type - Role model stores role_type */
+const USER_TYPE_TO_ROLE_TYPE = {
+    'super_admin': 'admin',
+    'sub_admin': 'sub_admin',
+    'seller': 'seller',
+    'seller_employee': 'employee',
+    'customer': 'customer',
+};
+
+/* Extracts applicable role_types from a role object - Role model has a single role_type */
+const getRoleApplicableTypes = (role) => {
+    const type = role?.role_type;
+    /* If the field is missing, return null which means valid for all */
+    if (!type) return null;
+    const cleaned = String(type).trim().toLowerCase();
+    return cleaned ? [cleaned] : null;
+};
+
+/* FIELD COMPONENTS */
 const InputField = ({ label, name, type = 'text', icon: Icon, required = false, value, error, onChange, hint, ...props }) => (
     <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-700">
@@ -100,15 +118,13 @@ const SelectField = ({ label, name, icon: Icon, options = [], required = false, 
     </div>
 );
 
-/* ================= MAIN COMPONENT ================= */
+/* MAIN COMPONENT */
 const UserManagement = () => {
     const params = useParams();
     const location = useLocation();
     const navigate = useNavigate();
 
-    const userId =
-        params.userId || params.id ||
-        new URLSearchParams(location.search).get('id') || '';
+    const userId = params.userId || params.id || new URLSearchParams(location.search).get('id') || '';
     const isEditMode = Boolean(userId) && !location.pathname.includes('/create');
 
     const [formData, setFormData] = useState(EMPTY_FORM);
@@ -119,10 +135,16 @@ const UserManagement = () => {
     const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [sellersList, setSellersList] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
 
-    /* ---------- FETCH USER (Edit Mode) ---------- */
+    /* ROLES STATE */
+    const [availableRoles, setAvailableRoles] = useState([]);
+    const [selectedRoleIds, setSelectedRoleIds] = useState([]);
+    const [originalRoleIds, setOriginalRoleIds] = useState([]);
+
+    const [actualUserId, setActualUserId] = useState(null);
+
+    /* FETCH USER (Edit Mode) */
     const fetchUserData = useCallback(async (silent = false) => {
         if (!userId) return;
 
@@ -135,7 +157,10 @@ const UserManagement = () => {
         setFetchError('');
         try {
             const res = await ApiService.getUserById(userId);
+
             const u = res?.data?.data?.user || res?.data?.user || res?.data?.data || res?.data || {};
+
+            setActualUserId(u._id || null);
 
             const fetchedData = {
                 ...EMPTY_FORM,
@@ -163,6 +188,21 @@ const UserManagement = () => {
             setFormData(fetchedData);
             setOriginalData(fetchedData);
 
+            /* Fetch roles currently assigned to the user */
+            try {
+                const rolesRes = await ApiService.getUserRoles(u._id || userId);
+                const rolesData = rolesRes?.data?.data || rolesRes?.data || [];
+                const roleIds = Array.isArray(rolesData)
+                    ? rolesData.map((r) => String(r._id || r))
+                    : [];
+                setSelectedRoleIds(roleIds);
+                setOriginalRoleIds(roleIds);
+            } catch (roleErr) {
+                console.error('Failed to fetch user roles:', roleErr);
+                setSelectedRoleIds([]);
+                setOriginalRoleIds([]);
+            }
+
             if (silent) {
                 toast.success('Data refreshed');
             }
@@ -184,25 +224,47 @@ const UserManagement = () => {
         }
     }, [userId]);
 
-    /* ---------- FETCH SELLERS LIST ---------- */
-    const fetchSellers = useCallback(async () => {
+    /* FETCH AVAILABLE ROLES */
+    const fetchAvailableRoles = useCallback(async () => {
         try {
+            const res = await ApiService.getAllRoles({ limit: 100 });
+            const data = res?.data || {};
             let list = [];
-            try {
-                const res = await ApiService.getAllSellers?.({ limit: 200 });
-                list = res?.data?.data?.sellers || res?.data?.data || res?.data?.sellers || res?.data || [];
-            } catch {
-                // ignore
-            }
-            if (!Array.isArray(list)) list = [];
-            setSellersList(list);
-        } catch {
-            setSellersList([]);
+            if (Array.isArray(data.data)) list = data.data;
+            else if (Array.isArray(data.roles)) list = data.roles;
+            else if (Array.isArray(data)) list = data;
+            setAvailableRoles(list);
+        } catch (err) {
+            console.error('Failed to fetch roles:', err);
+            setAvailableRoles([]);
         }
     }, []);
 
     useEffect(() => { if (isEditMode) fetchUserData(); }, [isEditMode, fetchUserData]);
-    useEffect(() => { fetchSellers(); }, [fetchSellers]);
+    useEffect(() => { fetchAvailableRoles(); }, [fetchAvailableRoles]);
+
+    /* Filter roles based on selected user_type, active status, and existing assignment */
+    const filteredRoles = useMemo(() => {
+        const all = Array.isArray(availableRoles) ? availableRoles : [];
+        if (!formData.user_type) return all;
+
+        /* Convert user_type to the matching role_type */
+        const targetRoleType = USER_TYPE_TO_ROLE_TYPE[formData.user_type] || formData.user_type;
+        const selectedSet = new Set(selectedRoleIds.map(String));
+
+        return all.filter((role) => {
+            const isActive = role?.is_active !== false;
+            const isSelected = selectedSet.has(String(role._id));
+
+            /* Hide inactive roles unless already assigned to this user (so admin can remove them) */
+            if (!isActive && !isSelected) return false;
+
+            const types = getRoleApplicableTypes(role);
+            /* If types is null, the role is valid for all user types */
+            if (!types) return true;
+            return types.includes(targetRoleType);
+        });
+    }, [availableRoles, formData.user_type, selectedRoleIds]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -217,6 +279,29 @@ const UserManagement = () => {
             }
             return next;
         });
+
+        /* When user_type changes, deselect roles that are no longer valid */
+        if (name === 'user_type') {
+            const targetRoleType = USER_TYPE_TO_ROLE_TYPE[value] || value;
+            const currentSelected = new Set(selectedRoleIds.map(String));
+            const allowedIds = new Set(
+                (Array.isArray(availableRoles) ? availableRoles : [])
+                    .filter((role) => {
+                        const isActive = role?.is_active !== false;
+                        const isSelected = currentSelected.has(String(role._id));
+
+                        /* Inactive roles are only allowed if already selected */
+                        if (!isActive && !isSelected) return false;
+
+                        const types = getRoleApplicableTypes(role);
+                        if (!types) return true;
+                        return types.includes(targetRoleType);
+                    })
+                    .map((r) => String(r._id))
+            );
+            setSelectedRoleIds((prev) => prev.filter((id) => allowedIds.has(String(id))));
+        }
+
         if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     };
 
@@ -249,9 +334,9 @@ const UserManagement = () => {
         return Object.keys(e).length === 0;
     };
 
-    /* ---------- CHECK IF FORM HAS CHANGED ---------- */
+    /* Check whether any field has been changed */
     const hasFormChanged = () => {
-        if (!originalData) return true; // Create mode → always allow
+        if (!originalData) return true;
         const fields = [
             'first_name', 'last_name', 'email', 'phone', 'username',
             'user_type', 'sub_admin_type', 'employee_type', 'seller_id',
@@ -263,15 +348,16 @@ const UserManagement = () => {
             const original = String(originalData[key] ?? '').trim();
             return current !== original;
         });
-        // Password change bhi ek change hai
         const passwordChanged = Boolean(formData.password);
-        return fieldChanged || passwordChanged;
+        const rolesChanged =
+            JSON.stringify([...selectedRoleIds].sort()) !==
+            JSON.stringify([...originalRoleIds].sort());
+        return fieldChanged || passwordChanged || rolesChanged;
     };
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
 
-        // No-change check (sirf Edit mode me)
         if (isEditMode && !hasFormChanged()) {
             toast.warning('No changes detected. Please modify at least one field before saving.');
             return;
@@ -303,18 +389,62 @@ const UserManagement = () => {
             }
             if (formData.user_type === 'seller_employee') {
                 payload.employee_type = formData.employee_type;
-                if (formData.seller_id) payload.seller_id = formData.seller_id;
             }
 
             if (formData.password) payload.password = formData.password;
 
+            let savedUserId = isEditMode ? actualUserId : null;
+
             if (isEditMode) {
                 await ApiService.updateUserByAdmin(userId, payload);
+                savedUserId = actualUserId || null;
                 toast.success('User updated successfully');
             } else {
-                await ApiService.createUserByAdmin(payload);
+                const createRes = await ApiService.createUserByAdmin(payload);
+                savedUserId =
+                    createRes?.data?.data?._id ||
+                    createRes?.data?.data?.user?._id ||
+                    createRes?.data?.user?._id;
                 toast.success('User created successfully');
             }
+
+            /* Assign or revoke roles based on the changes */
+            if (savedUserId) {
+                const currentIds = selectedRoleIds.map(String);
+                const originalIds = isEditMode ? originalRoleIds.map(String) : [];
+
+                const toAdd = currentIds.filter((id) => !originalIds.includes(id));
+                const toRemove = originalIds.filter((id) => !currentIds.includes(id));
+
+                if (toRemove.length > 0) {
+                    try {
+                        await ApiService.revokeRoleFromUser({
+                            user_id: savedUserId,
+                            role_ids: toRemove,
+                            reason: 'Removed from User Management',
+                        });
+                    } catch (revokeErr) {
+                        console.error('Failed to revoke roles:', revokeErr);
+                        toast.warning('User saved, but some roles could not be removed');
+                    }
+                }
+
+                if (toAdd.length > 0) {
+                    try {
+                        await ApiService.assignRoleToUser({
+                            user_id: savedUserId,
+                            role_ids: toAdd,
+                            reason: isEditMode
+                                ? 'Updated from User Management'
+                                : 'Assigned during user creation',
+                        });
+                    } catch (assignErr) {
+                        console.error('Failed to assign roles:', assignErr);
+                        toast.warning('User saved, but some roles could not be assigned');
+                    }
+                }
+            }
+
             navigate('/admin/users');
 
         } catch (error) {
@@ -335,7 +465,7 @@ const UserManagement = () => {
         }
     };
 
-    /* ---------- NAVIGATION ---------- */
+    /* NAVIGATION */
     const handleBack = () => {
         if (isEditMode && window.history.length > 2) {
             navigate(-1);
@@ -444,36 +574,25 @@ const UserManagement = () => {
                         )}
 
                         {showEmployee && (
-                            <>
-                                <SelectField
-                                    label="Employee Type"
-                                    name="employee_type"
-                                    icon={FaUserTag}
-                                    required
-                                    value={formData.employee_type}
-                                    error={errors.employee_type}
-                                    onChange={handleChange}
-                                    options={[{ value: '', label: 'Select Employee Type' }, ...EMPLOYEE_TYPES]}
-                                />
-                                {sellersList.length > 0 && (
-                                    <SelectField
-                                        label="Associated Seller (Optional)"
-                                        name="seller_id"
-                                        icon={FaStore}
-                                        value={formData.seller_id}
-                                        error={errors.seller_id}
-                                        onChange={handleChange}
-                                        options={[
-                                            { value: '', label: 'Select Seller' },
-                                            ...sellersList.map(s => ({
-                                                value: s._id,
-                                                label: s.business_name || s.store_name || s._id
-                                            }))
-                                        ]}
-                                    />
-                                )}
-                            </>
+                            <SelectField
+                                label="Employee Type"
+                                name="employee_type"
+                                icon={FaUserTag}
+                                required
+                                value={formData.employee_type}
+                                error={errors.employee_type}
+                                onChange={handleChange}
+                                options={[{ value: '', label: 'Select Employee Type' }, ...EMPLOYEE_TYPES]}
+                            />
                         )}
+
+                        {/* ASSIGNED ROLES - filtered by selected user_type and active status */}
+                        <UserRoleMultiSelect
+                            availableRoles={filteredRoles}
+                            selectedRoleIds={selectedRoleIds}
+                            onChange={setSelectedRoleIds}
+                            error={errors.role_ids}
+                        />
 
                         <SelectField
                             label="Account Status"

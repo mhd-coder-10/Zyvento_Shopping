@@ -40,9 +40,11 @@ const setAuthHeaders = () => {
     }
 };
 
-// ============ AUTH MODULE ============
 
 const ApiService = {
+
+    // ============ AUTH MODULE ============
+
     // Register new user
     register: (data) => {
         setAuthHeaders();
@@ -161,7 +163,190 @@ const ApiService = {
     },
 
 
-    // =========================== ADMIN MODULE =============================
+    // =========== ROLE MODULE ==============
+
+    // Get all roles (Admin only)
+    getAllRoles: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles`, { params, headers });
+    },
+
+    // Create role (Admin only)
+    createRole: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/roles`, data, { headers });
+    },
+
+    // Get role by ID (Admin only)
+    getRoleById: (roleId) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles/${roleId}`, { headers });
+    },
+
+    // Get users assigned to a specific role
+    getUsersByRole: (roleId, params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles/${roleId}/users`, { params, headers });
+    },
+
+    // Update role (Admin only)
+    updateRole: (roleId, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/roles/${roleId}`, data, { headers });
+    },
+
+    // Delete role (Admin only)
+    deleteRole: (roleId) => {
+        setAuthHeaders();
+        return axios.delete(`${API_URL}/admin/roles/${roleId}`, { headers });
+    },
+
+    // Toggle role status (Admin only)
+    toggleRoleStatus: (roleId) => {
+        setAuthHeaders();
+        return axios.patch(`${API_URL}/admin/roles/${roleId}/status`, {}, { headers });
+    },
+
+    // Assign permissions to role (Admin only)
+    assignPermissionsToRole: (roleId, data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/roles/${roleId}/permissions`, data, { headers });
+    },
+
+    // Remove permission from role (Admin only)
+    removePermissionFromRole: (roleId, permissionId) => {
+        setAuthHeaders();
+        return axios.delete(
+            `${API_URL}/admin/roles/${roleId}/permissions/${permissionId}`,
+            { headers }
+        );
+    },
+
+    // Get role permissions (Admin only)
+    getRolePermissions: (roleId) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles/${roleId}/permissions`, { headers });
+    },
+
+    // Assign role to user (Admin only)
+    assignRoleToUser: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/roles/assign`, data, { headers });
+    },
+
+    // Revoke role from user (Admin only)
+    revokeRoleFromUser: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/roles/revoke`, data, { headers });
+    },
+
+    // Bulk assign roles to users (Admin only)
+    bulkAssignRoles: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/roles/bulk-assign`, data, { headers });
+    },
+
+    // Get user roles (Admin only)
+    getUserRoles: (userId) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles/user/${userId}`, { headers });
+    },
+
+    // Get user permissions (Admin only)
+    getUserPermissions: (userId) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles/user/${userId}/permissions`, { headers });
+    },
+
+    // Get role history (Admin only)
+    getRoleHistory: (userId, params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles/history/${userId}`, { params, headers });
+    },
+
+    // =============== PERMISSION MODULE ================
+
+    // Create permission (Admin only)
+    createPermission: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/permissions`, data, { headers });
+    },
+
+    // Get all permissions (Admin only)
+    getAllPermissions: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/permissions`, { params, headers });
+    },
+
+    // Get permission by ID (Admin only)
+    getPermissionById: (permissionId) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/permissions/${permissionId}`, { headers });
+    },
+
+    // Update permission (Admin only)
+    updatePermission: (permissionId, data) => {
+        setAuthHeaders();
+        return axios.put(`${API_URL}/admin/permissions/${permissionId}`, data, { headers });
+    },
+
+    // Delete permission (Admin only)
+    deletePermission: (permissionId) => {
+        setAuthHeaders();
+        return axios.delete(`${API_URL}/admin/permissions/${permissionId}`, { headers });
+    },
+
+    // Toggle permission status (Admin only)
+    togglePermissionStatus: (permissionId) => {
+        setAuthHeaders();
+        return axios.patch(
+            `${API_URL}/admin/permissions/${permissionId}/status`,
+            {},
+            { headers }
+        );
+    },
+
+    // Get all permission modules (Admin only)
+    getPermissionModules: () => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/permissions/modules`, { headers });
+    },
+
+    // Get permissions by module (Admin only)
+    getPermissionsByModule: (moduleName) => {
+        setAuthHeaders();
+        return axios.get(
+            `${API_URL}/admin/permissions/module/${moduleName}`,
+            { headers }
+        );
+    },
+
+    // Get all permission actions (Admin only)
+    getPermissionActions: () => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/permissions/actions`, { headers });
+    },
+
+    // Get permission audit logs (Admin only)
+    getPermissionAuditLogs: (params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/permissions/audit`, { params, headers });
+    },
+
+    // Get permission audit log by ID (Admin only)
+    getPermissionAuditById: (auditId) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/permissions/audit/${auditId}`, { headers });
+    },
+
+    // Get roles that use a specific permission
+    getRolesByPermission: (permissionId, params = {}) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/permissions/${permissionId}/roles`, { params, headers });
+    },
+
+
+    // ============= ADMIN MODULE ===================
 
     // 1 DASHBORAD APIs ------------
 
@@ -195,56 +380,6 @@ const ApiService = {
 
 
     // 2  USER MANAGEMENT APIs ----------------
-    // // Get all users (Admin only)
-    // getAllUsers: (params) => {
-    //     setAuthHeaders();
-    //     return axios.get(`${API_URL}/admin/users`, {
-    //         headers: headers,
-    //         params: params,
-    //     });
-    // },
-
-    // // Get user by ID (Admin only)
-    // getUserById: (userId) => {
-    //     setAuthHeaders();
-    //     return axios.get(`${API_URL}/admin/users/${userId}`, {
-    //         headers: headers,
-    //     });
-    // },
-
-    // // Update user (Admin only)
-    // updateUserByAdmin: (userId, data) => {
-    //     setAuthHeaders();
-    //     return axios.put(`${API_URL}/admin/users/${userId}`, data, {
-    //         headers: headers,
-    //     });
-    // },
-
-    // // Delete user (Admin only)
-    // deleteUserByAdmin: (userId) => {
-    //     setAuthHeaders();
-    //     return axios.delete(`${API_URL}/admin/users/${userId}`, {
-    //         headers: headers,
-    //     });
-    // },
-
-    // // Update user status (Activate/Deactivate)
-    // updateUserStatus: (userId, data) => {
-    //     setAuthHeaders();
-    //     return axios.put(`${API_URL}/admin/users/${userId}/status`, data, {
-    //         headers: headers,
-    //     });
-    // },
-
-    // // Update user role
-    // updateUserRole: (userId, data) => {
-    //     setAuthHeaders();
-    //     return axios.put(`${API_URL}/admin/users/${userId}/role`, data, {
-    //         headers: headers,
-    //     });
-    // },
-
-
 
     // Get all users (with filters, pagination)
     getAllUsers: (params) => {
@@ -299,6 +434,31 @@ const ApiService = {
     updateUserStatus: (identifier, data) => {
         setAuthHeaders();
         return axios.patch(`${API_URL}/admin/users/${identifier}/status`, data, {
+            headers: headers,
+        });
+    },
+
+    // ROLES API
+    // Get user's assigned roles
+    getUserRoles: (userId) => {
+        setAuthHeaders();
+        return axios.get(`${API_URL}/admin/roles/user/${userId}`, {
+            headers: headers,
+        });
+    },
+
+    // Assign roles to user
+    assignRoleToUser: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/roles/assign`, data, {
+            headers: headers,
+        });
+    },
+
+    // Revoke roles from user
+    revokeRoleFromUser: (data) => {
+        setAuthHeaders();
+        return axios.post(`${API_URL}/admin/roles/revoke`, data, {
             headers: headers,
         });
     },
@@ -932,358 +1092,6 @@ const ApiService = {
     },
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // Get all roles (Admin only)
-    getAllRoles: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/roles`, {
-            headers: headers,
-        });
-    },
-
-    // Create role (Admin only)
-    createRole: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/roles`, data, {
-            headers: headers,
-        });
-    },
-
-    // Update role (Admin only)
-    updateRole: (roleId, data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/roles/${roleId}`, data, {
-            headers: headers,
-        });
-    },
-
-    // Delete role (Admin only)
-    deleteRole: (roleId) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/admin/roles/${roleId}`, {
-            headers: headers,
-        });
-    },
-
-    // Toggle role status (Admin only)
-    toggleRoleStatus: (roleId) => {
-        setAuthHeaders();
-        return axios.patch(`${API_URL}/admin/roles/${roleId}/status`, {}, {
-            headers: headers,
-        });
-    },
-
-    // Assign permissions to role (Admin only)
-    assignPermissionsToRole: (roleId, data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/roles/${roleId}/permissions`, data, {
-            headers: headers,
-        });
-    },
-
-    // Remove permission from role (Admin only)
-    removePermissionFromRole: (roleId, permissionId) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/admin/roles/${roleId}/permissions/${permissionId}`, {
-            headers: headers,
-        });
-    },
-
-    // Get role permissions (Admin only)
-    getRolePermissions: (roleId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/roles/${roleId}/permissions`, {
-            headers: headers,
-        });
-    },
-
-    // Assign role to user (Admin only)
-    assignRoleToUser: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/roles/assign`, data, {
-            headers: headers,
-        });
-    },
-
-    // Revoke role from user (Admin only)
-    revokeRoleFromUser: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/roles/revoke`, data, {
-            headers: headers,
-        });
-    },
-
-    // Bulk assign roles to users (Admin only)
-    bulkAssignRoles: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/roles/bulk-assign`, data, {
-            headers: headers,
-        });
-    },
-
-    // Get user roles (Admin only)
-    getUserRoles: (userId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/roles/user/${userId}`, {
-            headers: headers,
-        });
-    },
-
-    // Get user permissions (Admin only)
-    getUserPermissions: (userId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/roles/user/${userId}/permissions`, {
-            headers: headers,
-        });
-    },
-
-    // Get role history (Admin only)
-    getRoleHistory: (userId, params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/roles/history/${userId}`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // ============ PERMISSION MODULE ============
-
-    // Create permission (Admin only)
-    createPermission: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/permissions`, data, {
-            headers: headers,
-        });
-    },
-
-    // Get all permissions (Admin only)
-    getAllPermissions: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/permissions`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Get permission by ID (Admin only)
-    getPermissionById: (permissionId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/permissions/${permissionId}`, {
-            headers: headers,
-        });
-    },
-
-    // Update permission (Admin only)
-    updatePermission: (permissionId, data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/permissions/${permissionId}`, data, {
-            headers: headers,
-        });
-    },
-
-    // Delete permission (Admin only)
-    deletePermission: (permissionId) => {
-        setAuthHeaders();
-        return axios.delete(`${API_URL}/admin/permissions/${permissionId}`, {
-            headers: headers,
-        });
-    },
-
-    // Toggle permission status (Admin only)
-    togglePermissionStatus: (permissionId) => {
-        setAuthHeaders();
-        return axios.patch(`${API_URL}/admin/permissions/${permissionId}/status`, {}, {
-            headers: headers,
-        });
-    },
-
-    // Get all permission modules (Admin only)
-    getPermissionModules: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/permissions/modules`, {
-            headers: headers,
-        });
-    },
-
-    // Get permissions by module (Admin only)
-    getPermissionsByModule: (moduleName) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/permissions/module/${moduleName}`, {
-            headers: headers,
-        });
-    },
-
-    // Get all permission actions (Admin only)
-    getPermissionActions: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/permissions/actions`, {
-            headers: headers,
-        });
-    },
-
-    // Get permission audit logs (Admin only)
-    getPermissionAuditLogs: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/permissions/audit`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Get permission audit log by ID (Admin only)
-    getPermissionAuditById: (auditId) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/permissions/audit/${auditId}`, {
-            headers: headers,
-        });
-    },
-
-    // Get system settings (Admin only)
-    getSystemSettings: () => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/settings`, {
-            headers: headers,
-        });
-    },
-
-    // Update system settings (Admin only)
-    updateSystemSettings: (data) => {
-        setAuthHeaders();
-        return axios.put(`${API_URL}/admin/settings`, data, {
-            headers: headers,
-        });
-    },
-
-    // Get audit logs (Admin only)
-    getAuditLogs: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/audit-logs`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Get sales report (Admin only)
-    getSalesReport: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/reports/sales`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Get revenue report (Admin only)
-    getRevenueReport: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/reports/revenue`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Get product report (Admin only)
-    getProductReport: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/reports/products`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Get order report (Admin only)
-    getOrderReport: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/reports/orders`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Get user report (Admin only)
-    getUserReport: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/reports/users`, {
-            headers: headers,
-            params: params,
-        });
-    },
-
-    // Export data (Admin only)
-    exportData: (params) => {
-        setAuthHeaders();
-        return axios.get(`${API_URL}/admin/export`, {
-            headers: headers,
-            params: params,
-            responseType: 'blob',
-        });
-    },
-
-    // Bulk upload products (Admin only)
-    bulkUploadProducts: (formData) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/bulk-upload/products`, formData, {
-            headers: formDataHeaders,
-        });
-    },
-
-    // Bulk delete products (Admin only)
-    bulkDeleteProducts: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/bulk-delete/products`, data, {
-            headers: headers,
-        });
-    },
-
-    // Bulk update product status (Admin only)
-    bulkUpdateProductStatus: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/bulk-update/product-status`, data, {
-            headers: headers,
-        });
-    },
-
-    // Send notification to all users (Admin only)
-    sendBulkNotification: (data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/notifications/bulk`, data, {
-            headers: headers,
-        });
-    },
-
-    // Send notification to specific user (Admin only)
-    sendUserNotification: (userId, data) => {
-        setAuthHeaders();
-        return axios.post(`${API_URL}/admin/notifications/user/${userId}`, data, {
-            headers: headers,
-        });
-    },
 
     // ============ CUSTOMER ADDRESS MODULE ============
 

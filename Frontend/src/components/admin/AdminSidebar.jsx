@@ -34,22 +34,32 @@ const AdminSidebar = ({ isOpen, setIsOpen, isMobile, user }) => {
     };
 
     const navigation = [
-        { name: 'Dashboard', icon: FiHome, path: '/admin/dashboard', permission: 'view_dashboard' },
-        { name: 'Users', icon: FiUsers, path: '/admin/users', permission: 'view_users' },
-        { name: 'Sub-Admins', icon: FiUsers, path: '/admin/sub-admins', permission: 'view_sub_admins' },
-        { name: 'Sellers', icon: FiBriefcase, path: '/admin/sellers', permission: 'view_sellers' },
-        { name: 'Employees', icon: FiUserPlus, path: '/admin/employees', permission: 'view_employees' },
-        { name: 'Company Finance', path: '/admin/company-finance', permission: 'view_finance', icon: FiDollarSign },
-        { name: 'Products', path: '/admin/products', permission: 'view_products', icon: FiPackage },
-        { name: 'Inventory', path: '/admin/inventory', permission: 'view_inventory', icon: FiBox },
-        { name: 'Reviews', path: '/admin/reviews', permission: 'view_reviews', icon: FiStar },
-    
+        { name: 'Dashboard', icon: FiHome, path: '/admin/dashboard', permission: 'DASHBOARD_READ' },
+
+        {
+            name: 'Roles & Permissions',
+            icon: FiShield,
+            children: [
+                { name: 'Roles', path: '/admin/roles', permission: 'ROLES_READ' },
+                { name: 'Permissions', path: '/admin/permissions', permission: 'PERMISSIONS_READ' },
+            ],
+        },
+
+        { name: 'Users', icon: FiUsers, path: '/admin/users', permission: 'USERS_READ' },
+        { name: 'Sub-Admins', icon: FiUsers, path: '/admin/sub-admins', permission: 'SUB_ADMINS_READ' },
+        { name: 'Sellers', icon: FiBriefcase, path: '/admin/sellers', permission: 'SELLERS_READ' },
+        { name: 'Employees', icon: FiUserPlus, path: '/admin/employees', permission: 'EMPLOYEES_READ' },
+        { name: 'Company Finance', path: '/admin/company-finance', permission: 'FINANCE_READ', icon: FiDollarSign },
+        { name: 'Products', path: '/admin/products', permission: 'PRODUCTS_READ', icon: FiPackage },
+        { name: 'Inventory', path: '/admin/inventory', permission: 'INVENTORY_READ', icon: FiBox },
+        { name: 'Reviews', path: '/admin/reviews', permission: 'REVIEWS_READ', icon: FiStar },
+
         {
             name: 'Category Management',
             icon: FiPackage,
             children: [
-                { name: 'Root Category', path: '/admin/categories', permission: 'view_categories', icon: FiGrid },
-                { name: 'Sub-Category', path: '/admin/sub-categories', permission: 'view_sub_categories', icon: FiLayers },
+                { name: 'Root Category', path: '/admin/categories', permission: 'CATEGORIES_READ', icon: FiGrid },
+                { name: 'Sub-Category', path: '/admin/sub-categories', permission: 'CATEGORIES_READ', icon: FiLayers },
             ],
         },
 
@@ -57,26 +67,16 @@ const AdminSidebar = ({ isOpen, setIsOpen, isMobile, user }) => {
             name: 'Order Management',
             icon: FiShoppingBag,
             children: [
-                { name: 'Orders', path: '/admin/orders', permission: 'view_orders', icon: FiShoppingCart },
-                { name: 'Returns', path: '/admin/returns', permission: 'view_returns', icon: FiRefreshCw },
+                { name: 'Orders', path: '/admin/orders', permission: 'ORDERS_READ', icon: FiShoppingCart },
+                { name: 'Returns', path: '/admin/returns', permission: 'RETURNS_READ', icon: FiRefreshCw },
             ],
         },
 
-        { name: "Coupons", path: "/admin/coupons", permission: "view_coupons", icon: FiTag },
-        { name: 'Notifications', path: '/admin/notifications', permission: 'view_notifications', icon: FiBell },
-        { name: 'Reports', path: '/admin/reports', permission: 'view_reports', icon: FiPieChart },
-
-        {
-            name: 'Roles & Permissions',
-            icon: FiShield,
-            children: [
-                { name: 'Roles', path: '/admin/roles', permission: 'view_roles' },
-                { name: 'Permissions', path: '/admin/permissions', permission: 'view_permissions' },
-            ],
-        },
-
-        { name: 'Settings', icon: FiSettings, path: '/admin/settings', permission: 'view_settings' },
-        { name: 'Visit Store', icon: FiExternalLink , path: '/',  external: true},
+        { name: "Coupons", path: "/admin/coupons", permission: "COUPONS_READ", icon: FiTag },
+        { name: 'Notifications', path: '/admin/notifications', permission: 'NOTIFICATIONS_READ', icon: FiBell },
+        { name: 'Reports', path: '/admin/reports', permission: 'REPORTS_READ', icon: FiPieChart },
+        { name: 'Settings', icon: FiSettings, path: '/admin/settings', permission: 'SETTINGS_READ' },
+        { name: 'Visit Store', icon: FiExternalLink, path: '/', external: true },
     ];
 
     const filteredNavigation = navigation.filter((item) => {

@@ -63,14 +63,13 @@ import SellerStatus from "../pages/public/seller/SellerStatus"
 // Admin Dashboard
 import AdminDashboard from '../pages/admin/dashboard/Dashboard';
 
-// Admin - Roles
-import Roles from '../pages/admin/roles/Roles';
-import CreateRole from '../pages/admin/roles/CreateRole';
-import EditRole from '../pages/admin/roles/EditRole';
 
-// Admin - Permissions
-import Permissions from '../pages/admin/permissions/Permissions';
-import AssignPermissions from '../pages/admin/permissions/AssignPermissions';
+
+// Admin - Roles
+import RolePermission from '../pages/admin/roles/RolePermission';
+import RoleDetails from '../pages/admin/roles/RoleDetails';
+import PermissionDetails from '../pages/admin/roles/PermissionDetails';
+
 
 // Admin - Users
 import Users from '../pages/admin/users/Users';
@@ -225,13 +224,11 @@ const AppRoutes = () => {
                 <Route path="dashboard" element={<AdminDashboard />} />
 
                 {/* Roles */}
-                <Route path="roles" element={<Roles />} />
-                <Route path="roles/create" element={<CreateRole />} />
-                <Route path="roles/edit/:roleId" element={<EditRole />} />
-                <Route path="roles/:roleId/permissions" element={<AssignPermissions />} />
-
-                {/* Permissions */}
-                <Route path="permissions" element={<Permissions />} />
+                <Route path="roles" element={<RolePermission />} />
+                <Route path="roles/create" element={<RolePermission />} />
+                <Route path="roles/:roleId" element={<RoleDetails />} />
+                <Route path="permissions" element={<RolePermission />} />
+                <Route path="permissions/:permissionId" element={<PermissionDetails />} />
 
                 {/* Users */}
                 <Route path="users" element={<Users />} />
@@ -246,9 +243,9 @@ const AppRoutes = () => {
 
                 {/* Sub-Admins  */}
                 <Route path="/admin/sub-admins" element={<SubAdminList />} />
-                <Route path="/admin/sub-admins/create" element={<SubAdminManagement/>} />
+                <Route path="/admin/sub-admins/create" element={<SubAdminManagement />} />
                 <Route path="/admin/sub-admins/:subAdminCode" element={<SubAdminDetails />} />
-                <Route path="/admin/sub-admins/:subAdminCode/edit" element={<SubAdminManagement/>} />
+                <Route path="/admin/sub-admins/:subAdminCode/edit" element={<SubAdminManagement />} />
 
                 {/* Employees */}
                 <Route path="/admin/employees" element={<EmployeeList />} />

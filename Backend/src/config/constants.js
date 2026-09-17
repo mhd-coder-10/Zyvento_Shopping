@@ -29,28 +29,19 @@ const constants = {
 
     // ============ SUB ADMIN TYPES ============
     SUB_ADMIN_TYPES: {
-        SUB_ADMIN_MANAGER: 'sub_admin_manager',
-        SELLER_MANAGER: 'seller_manager',
-        SELLER_OPENING_ACCOUNT_MANAGER: 'seller_opening_account_manager',
+        MANAGER: 'manager',
         FINANCE_MANAGER: 'finance_manager',
         SUPPORT_MANAGER: 'support_manager',
-        REPORT_MANAGER: 'report_manager',
-        PRODUCT_CATEGORY_MANAGER: 'product_category_manager',
-        CONTENT_MANAGER: 'content_manager',
-        MARKETING_MANAGER: 'marketing_manager',
-        ANALYTICS_MANAGER: 'analytics_manager',
-        COMPLIANCE_MANAGER: 'compliance_manager',
-        SHIPPING_MANAGER: 'shipping_manager',
+        SELLER_MANAGER: 'seller_manager',
     },
 
     // ============ EMPLOYEE TYPES ============
     EMPLOYEE_TYPES: {
+        MANAGER: 'manager',
         PRODUCT_MANAGER: 'product_manager',
         ORDER_MANAGER: 'order_manager',
         INVENTORY_MANAGER: 'inventory_manager',
-        SHIPPING_MANAGER: 'shipping_manager',
-        CUSTOMER_SERVICE_MANAGER: 'customer_service_manager',
-        MARKETING_MANAGER: 'marketing_manager',
+        SUPPORT_STAFF: 'support_staff',
         ACCOUNT_MANAGER: 'account_manager',
     },
 
