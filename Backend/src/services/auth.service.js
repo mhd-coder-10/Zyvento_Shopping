@@ -101,58 +101,6 @@ class AuthService {
     }
 
     // LOGIN
-    // async login(email, password) {
-    //     const user = await User.findOne({ email: email.toLowerCase() })
-    //         .select('+password')
-    //         .populate('role_ids')
-    //         .populate('direct_permissions');
-
-    //     if (!user) {
-    //         throw ApiError.unauthorized('Account not found with this email');
-    //     }
-
-    //     const isPasswordValid = await bcrypt.compare(password, user.password);
-    //     if (!isPasswordValid) {
-    //         throw ApiError.unauthorized('Incorrect password. Please try again.');
-    //     }
-
-    //     if (user.account_status === 'blocked') {
-    //         throw ApiError.forbidden('Your account has been blocked. Please contact support.');
-    //     }
-
-    //     if (user.account_status === 'deleted') {
-    //         throw ApiError.forbidden('Your account has been deleted.');
-    //     }
-
-    //     if (user.account_status === 'inactive') {
-    //         throw ApiError.forbidden('Your account is inactive. Please contact support.');
-    //     }
-
-    //     if (!user.is_email_verified && user.user_type !== 'super_admin') {
-    //         throw ApiError.forbidden('Please verify your email before logging in.');
-    //     }
-
-    //     user.last_login = new Date();
-    //     await user.save({ validateBeforeSave: false });
-
-    //     const tokens = jwtHelper.generateTokens(user);
-
-    //     user.refresh_token = tokens.refreshToken;
-    //     await user.save({ validateBeforeSave: false });
-
-    //     const userResponse = user.toObject();
-    //     delete userResponse.password;
-    //     delete userResponse.refresh_token;
-
-    //     logger.info(`User logged in: ${user.email}`, { userId: user._id, userType: user.user_type });
-
-    //     return {
-    //         user: userResponse,
-    //         ...tokens
-    //     };
-    // }
-
-    // LOGIN
     async login(email, password) {
         const user = await User.findOne({ email: email.toLowerCase() })
             .select('+password')

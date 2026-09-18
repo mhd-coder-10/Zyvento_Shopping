@@ -13,12 +13,39 @@ const AdminSidebar = ({ isOpen, setIsOpen, isMobile, user }) => {
     const location = useLocation();
     const [expandedModules, setExpandedModules] = useState({});
 
+    const extractPermissionKeys = (user) => {
+        if (!user) return [];
+        const sources = [
+            user.permissions,
+            user.permission_keys,
+            user.role?.permissions,
+            Array.isArray(user.roles) ? user.roles.flatMap((r) => r.permissions || []) : [],
+            Array.isArray(user.role_ids) ? user.role_ids.flatMap((r) => r.permission_ids || []) : [],
+        ];
+        const out = new Set();
+        sources.forEach((src) => {
+            if (!Array.isArray(src)) return;
+            src.forEach((p) => {
+                if (!p) return;
+                if (typeof p === 'string') {
+                    out.add(p.toUpperCase());
+                } else if (p.permission_key) {
+                    out.add(String(p.permission_key).toUpperCase());
+                } else if (p.key) {
+                    out.add(String(p.key).toUpperCase());
+                }
+            });
+        });
+        return Array.from(out);
+    };
+
     const hasPermission = (permission) => {
-        if (user?.user_type === 'super_admin' || user?.role?.roleName === 'super_admin') {
-            return true;
-        }
-        const userPermissions = user?.permissions || user?.role?.permissions || [];
-        return userPermissions.includes(permission);
+        /* Super admin → everything */
+        if (user?.user_type === 'super_admin') return true;
+        if (!permission) return true;
+
+        const perms = extractPermissionKeys(user);
+        return perms.includes(String(permission).toUpperCase());
     };
 
     const toggleModule = (moduleName) => {
@@ -80,12 +107,16 @@ const AdminSidebar = ({ isOpen, setIsOpen, isMobile, user }) => {
     ];
 
     const filteredNavigation = navigation.filter((item) => {
-        if (!item.permission) return true;
+    
+        if (!item.permission && !item.children) return true;
+
         if (item.children) {
             return item.children.some((child) => hasPermission(child.permission));
         }
+
         return hasPermission(item.permission);
     });
+
 
     return (
         <>

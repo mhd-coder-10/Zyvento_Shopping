@@ -1,3 +1,4 @@
+
 // LOGIN PAGE
 // Description: User login page with role-based redirect
 // Features: Login, Role-based redirect, Auto-login after registration
@@ -9,23 +10,32 @@ import { loginUser } from '../../store/slices/authSlice';
 import AuthForm from '../../components/public/AuthForm';
 import { toast } from 'react-toastify';
 
+/* Returns the correct dashboard path based on user_type */
+const getDashboardPath = (userType) => {
+    switch (userType) {
+        case 'super_admin':
+        case 'sub_admin':
+            return '/admin/dashboard';
+        case 'seller':
+        case 'seller_employee':
+            return '/';
+        case 'customer':
+        default:
+            return '/';
+    }
+};
+
 const Login = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { loading, error, user, isAuthenticated } = useSelector((state) => state.auth);
 
-    // Redirect based on user role after successful login
+    // Redirect based on user_type after successful login
     useEffect(() => {
         if (isAuthenticated && user) {
-            const role = user?.role?.roleName || user?.role_name || 'customer';
-
-            if (role === 'super_admin' || role === 'sub_admin') {
-                navigate('/admin/dashboard', { replace: true });
-            } else if (role === 'seller' || role === 'seller_employee') {
-                navigate('/seller/dashboard', { replace: true });
-            } else {
-                navigate('/', { replace: true });
-            }
+            /* Backend sends user_type - not role.roleName */
+            const userType = user?.user_type || user?.role?.role_type || 'customer';
+            navigate(getDashboardPath(userType), { replace: true });
         }
     }, [isAuthenticated, user, navigate]);
 
